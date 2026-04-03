@@ -1,12 +1,18 @@
 package com.sales.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
 @Table(name = "transaction_items")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class TransactionItemEntity {
 
     @Id
@@ -28,52 +34,4 @@ public class TransactionItemEntity {
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
-
-    public TransactionItemEntity() {}
-
-    public TransactionItemEntity(ProductEntity product, Integer quantity, BigDecimal price) {
-        this.product = product;
-        this.quantity = quantity;
-        this.price = price;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public TransactionEntity getTransaction() {
-        return transaction;
-    }
-
-    public void setTransaction(TransactionEntity transaction) {
-        this.transaction = transaction;
-    }
-
-    public ProductEntity getProduct() {
-        return product;
-    }
-
-    public void setProduct(ProductEntity product) {
-        this.product = product;
-    }
-
-    public Integer getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
 }

@@ -44,7 +44,7 @@ public class UserService {
         if (userRepository.findByUsername(userDTO.getUsername()).isPresent()) {
             throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
         }
-        UserEntity entity = new UserEntity(userDTO.getUsername(), userDTO.getPassword(), userDTO.getRole());
+        UserEntity entity = new UserEntity(null, userDTO.getUsername(), userDTO.getPassword(), userDTO.getRole(), null);
         userRepository.persist(entity);
         return toDTO(entity);
     }
@@ -67,11 +67,6 @@ public class UserService {
     }
 
     private UserDTO toDTO(UserEntity entity) {
-        UserDTO dto = new UserDTO();
-        dto.setId(entity.getId());
-        dto.setUsername(entity.getUsername());
-        dto.setPassword(entity.getPassword());
-        dto.setRole(entity.getRole());
-        return dto;
+        return new UserDTO(entity.getId(), entity.getUsername(), entity.getPassword(), entity.getRole());
     }
 }

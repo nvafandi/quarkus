@@ -33,11 +33,7 @@ public class ProductService {
 
     @Transactional
     public ProductDTO create(ProductDTO productDTO) {
-        ProductEntity entity = new ProductEntity(
-                productDTO.getName(),
-                productDTO.getPrice(),
-                productDTO.getStock()
-        );
+        ProductEntity entity = new ProductEntity(null, productDTO.getName(), productDTO.getPrice(), productDTO.getStock(), null);
         productRepository.persist(entity);
         return toDTO(entity);
     }
@@ -70,12 +66,6 @@ public class ProductService {
     }
 
     private ProductDTO toDTO(ProductEntity entity) {
-        ProductDTO dto = new ProductDTO();
-        dto.setId(entity.getId());
-        dto.setName(entity.getName());
-        dto.setPrice(entity.getPrice());
-        dto.setStock(entity.getStock());
-        dto.setCreatedAt(entity.getCreatedAt());
-        return dto;
+        return new ProductDTO(entity.getId(), entity.getName(), entity.getPrice(), entity.getStock(), entity.getCreatedAt());
     }
 }

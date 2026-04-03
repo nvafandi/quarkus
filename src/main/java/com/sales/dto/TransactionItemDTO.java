@@ -1,9 +1,15 @@
 package com.sales.dto;
 
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class TransactionItemDTO {
 
     @NotNull(message = "Product ID is required")
@@ -14,35 +20,4 @@ public class TransactionItemDTO {
     private Integer quantity;
 
     private BigDecimal price;
-
-    public TransactionItemDTO() {}
-
-    public TransactionItemDTO(UUID productId, Integer quantity) {
-        this.productId = productId;
-        this.quantity = quantity;
-    }
-
-    public UUID getProductId() {
-        return productId;
-    }
-
-    public void setProductId(UUID productId) {
-        this.productId = productId;
-    }
-
-    public Integer getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
-    }
-
-    public BigDecimal getPrice() {
-        return price;
-    }
-
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
 }

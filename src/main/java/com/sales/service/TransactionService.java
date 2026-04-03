@@ -17,7 +17,6 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -59,7 +58,7 @@ public class TransactionService {
         UserEntity user = userRepository.findById(transactionDTO.getUserId())
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + transactionDTO.getUserId()));
 
-        TransactionEntity transaction = new TransactionEntity(user, BigDecimal.ZERO);
+        TransactionEntity transaction = new TransactionEntity(null, user, BigDecimal.ZERO, null, null);
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (TransactionItemDTO itemDTO : transactionDTO.getItems()) {
@@ -75,11 +74,7 @@ public class TransactionService {
 
             product.setStock(product.getStock() - itemDTO.getQuantity());
 
-            TransactionItemEntity item = new TransactionItemEntity(
-                    product,
-                    itemDTO.getQuantity(),
-                    product.getPrice()
-            );
+            TransactionItemEntity item = new TransactionItemEntity(null, null, product, itemDTO.getQuantity(), product.getPrice());
             transaction.addItem(item);
 
             totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(itemDTO.getQuantity())));
@@ -114,10 +109,6 @@ public class TransactionService {
     }
 
     private TransactionItemDTO toItemDTO(TransactionItemEntity entity) {
-        TransactionItemDTO dto = new TransactionItemDTO();
-        dto.setProductId(entity.getProduct().getId());
-        dto.setQuantity(entity.getQuantity());
-        dto.setPrice(entity.getPrice());
-        return dto;
+        return new TransactionItemDTO(entity.getProduct().getId(), entity.getQuantity(), entity.getPrice());
     }
 }

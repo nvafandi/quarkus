@@ -1,6 +1,9 @@
 package com.sales.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -10,6 +13,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "transactions")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class TransactionEntity {
 
     @Id
@@ -36,55 +42,8 @@ public class TransactionEntity {
         this.createdAt = LocalDateTime.now();
     }
 
-    public TransactionEntity() {}
-
-    public TransactionEntity(UserEntity user, BigDecimal totalAmount) {
-        this.user = user;
-        this.totalAmount = totalAmount;
-    }
-
     public void addItem(TransactionItemEntity item) {
         items.add(item);
         item.setTransaction(this);
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public UserEntity getUser() {
-        return user;
-    }
-
-    public void setUser(UserEntity user) {
-        this.user = user;
-    }
-
-    public BigDecimal getTotalAmount() {
-        return totalAmount;
-    }
-
-    public void setTotalAmount(BigDecimal totalAmount) {
-        this.totalAmount = totalAmount;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public List<TransactionItemEntity> getItems() {
-        return items;
-    }
-
-    public void setItems(List<TransactionItemEntity> items) {
-        this.items = items;
     }
 }
