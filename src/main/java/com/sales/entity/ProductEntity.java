@@ -1,5 +1,6 @@
 package com.sales.entity;
 
+import com.sales.id.Uuid7Generator;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,7 +19,7 @@ public class ProductEntity {
 
     @Id
     @GeneratedValue(generator = "UUID7")
-    @GenericGenerator(name = "UUID7", strategy = "org.hibernate.id.uuid.Uuid7Generator")
+    @GenericGenerator(name = "UUID7", strategy = "com.sales.id.Uuid7Generator")
     @Column(columnDefinition = "UUID")
     private UUID id;
 
