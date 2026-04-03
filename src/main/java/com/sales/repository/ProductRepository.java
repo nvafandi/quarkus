@@ -13,4 +13,8 @@ public class ProductRepository implements PanacheRepository<ProductEntity> {
     public Optional<ProductEntity> findById(UUID id) {
         return find("id", id).firstResultOptional();
     }
+
+    public boolean deleteById(UUID id) {
+        return delete("id", id) > 0;
+    }
 }

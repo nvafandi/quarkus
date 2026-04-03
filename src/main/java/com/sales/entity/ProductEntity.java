@@ -17,8 +17,8 @@ import java.util.UUID;
 public class ProductEntity {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GeneratedValue(generator = "UUID7")
+    @GenericGenerator(name = "UUID7", strategy = "org.hibernate.id.uuid.Uuid7Generator")
     @Column(columnDefinition = "UUID")
     private UUID id;
 

@@ -17,4 +17,8 @@ public class UserRepository implements PanacheRepository<UserEntity> {
     public Optional<UserEntity> findById(UUID id) {
         return find("id", id).firstResultOptional();
     }
+
+    public boolean deleteById(UUID id) {
+        return delete("id", id) > 0;
+    }
 }

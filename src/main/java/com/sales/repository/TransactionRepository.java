@@ -18,4 +18,8 @@ public class TransactionRepository implements PanacheRepository<TransactionEntit
     public List<TransactionEntity> findByUserId(UUID userId) {
         return list("user.id", userId);
     }
+
+    public boolean deleteById(UUID id) {
+        return delete("id", id) > 0;
+    }
 }
