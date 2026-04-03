@@ -59,38 +59,43 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Users table
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
     username VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50),
-    created_at TIMESTAMP
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
 
 -- Products table
 CREATE TABLE products (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
     name VARCHAR(150) NOT NULL,
     price NUMERIC(15, 2) NOT NULL,
     stock INTEGER NOT NULL,
-    created_at TIMESTAMP
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
 
 -- Transactions table
 CREATE TABLE transactions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
     user_id UUID NOT NULL,
     total_amount NUMERIC(15, 2) NOT NULL,
     created_at TIMESTAMP,
+    updated_at TIMESTAMP,
     CONSTRAINT fk_transactions_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 -- Transaction Items table
 CREATE TABLE transaction_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v7(),
+    id UUID PRIMARY KEY DEFAULT uuidv7(),
     transaction_id UUID NOT NULL,
     product_id UUID NOT NULL,
     quantity INTEGER NOT NULL,
     price NUMERIC(15, 2) NOT NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
     CONSTRAINT fk_transaction_items_transaction FOREIGN KEY (transaction_id) REFERENCES transactions(id),
     CONSTRAINT fk_transaction_items_product FOREIGN KEY (product_id) REFERENCES products(id)
 );
@@ -107,7 +112,8 @@ CREATE INDEX idx_transaction_items_product_id ON transaction_items(product_id);
 - `users.username` has a unique constraint to prevent duplicate usernames
 - Foreign key constraints ensure referential integrity between related tables
 - Monetary values use `NUMERIC(15, 2)` for precision (up to 13 digits + 2 decimal places)
-- Timestamps are automatically set when records are created via JPA `@PrePersist`
+- **`created_at`**: Automatically set when record is created via JPA `@PrePersist`
+- **`updated_at`**: Automatically updated on every update via JPA `@PreUpdate`
 - Cascading deletes: When a transaction is deleted, all its items are automatically deleted (orphanRemoval)
 
 ### UUID v7 Format Example
@@ -202,6 +208,18 @@ curl -X POST http://localhost:8080/api/users \
   -d '{"username":"john","password":"secret123","role":"CASHIER"}'
 ```
 
+**Response:**
+```json
+{
+  "id": "019d54c7-d83c-7c28-8000-0682ed879d04",
+  "username": "john",
+  "password": "secret123",
+  "role": "CASHIER",
+  "createdAt": "2026-04-04T02:17:56.413436",
+  "updatedAt": "2026-04-04T02:17:56.413452"
+}
+```
+
 ### Create Product
 ```bash
 curl -X POST http://localhost:8080/api/products \
@@ -209,22 +227,73 @@ curl -X POST http://localhost:8080/api/products \
   -d '{"name":"Laptop","price":1500000,"stock":50}'
 ```
 
+**Response:**
+```json
+{
+  "id": "019d54c8-1ad8-70c8-8000-0686e5e2d186",
+  "name": "Laptop",
+  "price": 1500000.00,
+  "stock": 50,
+  "createdAt": "2026-04-04T02:18:13.464520",
+  "updatedAt": "2026-04-04T02:18:13.464520"
+}
+```
+
 ### Create Transaction
 ```bash
 curl -X POST http://localhost:8080/api/transactions \
   -H "Content-Type: application/json" \
   -d '{
-    "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "userId": "019d54c7-d83c-7c28-8000-0682ed879d04",
     "items": [
-      {"productId": "c3d4e5f6-a7b8-9012-cdef-123456789012", "quantity": 2}
+      {"productId": "019d54c8-1ad8-70c8-8000-0686e5e2d186", "quantity": 2}
     ]
   }'
 ```
 
+**Response:**
+```json
+{
+  "id": "019d54c9-84c0-77ae-8000-069c7822b826",
+  "userId": "019d54c7-d83c-7c28-8000-0682ed879d04",
+  "totalAmount": 3000000.00,
+  "createdAt": "2026-04-04T02:19:46.112474",
+  "updatedAt": "2026-04-04T02:19:46.112495",
+  "items": [
+    {
+      "productId": "019d54c8-1ad8-70c8-8000-0686e5e2d186",
+      "quantity": 2,
+      "price": 1500000.00
+    }
+  ]
+}
+```
+
+### Update User
+```bash
+curl -X PUT http://localhost:8080/api/users/019d54c7-d83c-7c28-8000-0682ed879d04 \
+  -H "Content-Type: application/json" \
+  -d '{"username":"john_updated","password":"newpass","role":"MANAGER"}'
+```
+
+**Response:**
+```json
+{
+  "id": "019d54c7-d83c-7c28-8000-0682ed879d04",
+  "username": "john_updated",
+  "password": "newpass",
+  "role": "MANAGER",
+  "createdAt": "2026-04-04T02:17:56.413436",
+  "updatedAt": "2026-04-04T02:28:38.730639"
+}
+```
+
+Notice `updatedAt` changes on every update while `createdAt` remains the same.
+
 ## Project Structure
 
 ```
-sales-system1/
+sales-system/
 ├── src/main/java/com/sales/
 │   ├── id/
 │   │   └── Uuid7Generator.java          # Custom UUID v7 generator
@@ -263,9 +332,14 @@ sales-system1/
 - **All primary keys use UUID v7** - Time-ordered, sortable identifiers
 - Custom `Uuid7Generator` class generates UUID v7 (Hibernate 6.6.1 doesn't have built-in support)
 - UUID v7 provides chronological ordering, reducing index fragmentation
+- **All entities have `created_at` and `updated_at` timestamps**
+  - `created_at`: Auto-set on insert via JPA `@PrePersist`
+  - `updated_at`: Auto-updated on every change via JPA `@PreUpdate`
+- **All DTOs include `createdAt` and `updatedAt` fields** for API responses
 - Stock validation before creating transaction
 - Transaction management in service layer
 - DTO pattern for API communication
 - Global exception handling
 - **Quarkus 3.17.0** upgraded from 3.6.0 for Hibernate 6.6.1 support
 - **REST** replaces deprecated `RESTEasy Reactive` in Quarkus 3.17+
+- Environment variables for database credentials (`DB_USERNAME`, `DB_PASSWORD`, `DB_URL`)

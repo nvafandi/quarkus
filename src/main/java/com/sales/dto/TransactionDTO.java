@@ -24,6 +24,8 @@ public class TransactionDTO {
 
     private LocalDateTime createdAt;
 
+    private LocalDateTime updatedAt;
+
     @NotEmpty(message = "Transaction must have at least one item")
     @Valid
     private List<TransactionItemDTO> items;

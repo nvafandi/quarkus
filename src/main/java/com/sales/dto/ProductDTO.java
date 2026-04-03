@@ -28,4 +28,6 @@ public class ProductDTO {
     private Integer stock;
 
     private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

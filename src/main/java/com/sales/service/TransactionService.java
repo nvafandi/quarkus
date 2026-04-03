@@ -58,7 +58,9 @@ public class TransactionService {
         UserEntity user = userRepository.findById(transactionDTO.getUserId())
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + transactionDTO.getUserId()));
 
-        TransactionEntity transaction = new TransactionEntity(null, user, BigDecimal.ZERO, null, null);
+        TransactionEntity transaction = new TransactionEntity();
+        transaction.setUser(user);
+        transaction.setTotalAmount(BigDecimal.ZERO);
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (TransactionItemDTO itemDTO : transactionDTO.getItems()) {
@@ -74,7 +76,11 @@ public class TransactionService {
 
             product.setStock(product.getStock() - itemDTO.getQuantity());
 
-            TransactionItemEntity item = new TransactionItemEntity(null, null, product, itemDTO.getQuantity(), product.getPrice());
+            TransactionItemEntity item = new TransactionItemEntity();
+            item.setTransaction(null);
+            item.setProduct(product);
+            item.setQuantity(itemDTO.getQuantity());
+            item.setPrice(product.getPrice());
             transaction.addItem(item);
 
             totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(itemDTO.getQuantity())));
@@ -99,6 +105,7 @@ public class TransactionService {
         dto.setUserId(entity.getUser().getId());
         dto.setTotalAmount(entity.getTotalAmount());
         dto.setCreatedAt(entity.getCreatedAt());
+        dto.setUpdatedAt(entity.getUpdatedAt());
 
         List<TransactionItemDTO> itemDTOs = entity.getItems().stream()
                 .map(this::toItemDTO)
