@@ -1,6 +1,6 @@
 package com.sales.entity;
 
-import com.sales.id.Uuid7Generator;
+import com.sales.util.Uuid7Generator;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,7 +18,7 @@ public class UserEntity {
 
     @Id
     @GeneratedValue(generator = "UUID7")
-    @GenericGenerator(name = "UUID7", strategy = "com.sales.id.Uuid7Generator")
+    @GenericGenerator(name = "UUID7", strategy = "com.sales.util.Uuid7Generator")
     @Column(columnDefinition = "UUID")
     private UUID id;
 

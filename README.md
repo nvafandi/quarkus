@@ -15,7 +15,8 @@ A backend sales system built with Quarkus that manages Users, Products, and Tran
 - Hibernate ORM 6.6.1 with Panache
 - REST (Quarkus REST) + JSON-B
 - Bean Validation
-- **Custom UUID v7 Generator** (`com.sales.id.Uuid7Generator`)
+- **Custom UUID v7 Generator** (`com.sales.util.Uuid7Generator`)
+- **Swagger UI / OpenAPI 3.1** for API documentation
 
 ## Prerequisites
 - Java 17+
@@ -170,132 +171,47 @@ java -jar target/quarkus-app/quarkus-run.jar
 ./mvnw package -Pnative
 ```
 
-## API Endpoints
+## API Documentation
 
-### Users
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/users` | Get all users |
-| GET | `/api/users/{id}` | Get user by ID |
-| POST | `/api/users` | Create user |
-| PUT | `/api/users/{id}` | Update user |
-| DELETE | `/api/users/{id}` | Delete user |
+This project uses **Swagger UI (OpenAPI)** for interactive API documentation.
 
-### Products
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/products` | Get all products |
-| GET | `/api/products/{id}` | Get product by ID |
-| POST | `/api/products` | Create product |
-| PUT | `/api/products/{id}` | Update product |
-| DELETE | `/api/products/{id}` | Delete product |
+### Access Swagger UI
 
-### Transactions
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/transactions` | Get all transactions |
-| GET | `/api/transactions/{id}` | Get transaction by ID |
-| GET | `/api/transactions/user/{userId}` | Get transactions by user |
-| POST | `/api/transactions` | Create transaction |
-| DELETE | `/api/transactions/{id}` | Delete transaction |
-
-## Example Requests
-
-### Create User
-```bash
-curl -X POST http://localhost:8080/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"username":"john","password":"secret123","role":"CASHIER"}'
+```
+http://localhost:8080/swagger-ui
 ```
 
-**Response:**
-```json
-{
-  "id": "019d54c7-d83c-7c28-8000-0682ed879d04",
-  "username": "john",
-  "password": "secret123",
-  "role": "CASHIER",
-  "createdAt": "2026-04-04T02:17:56.413436",
-  "updatedAt": "2026-04-04T02:17:56.413452"
-}
+### OpenAPI Specification
+
+```
+http://localhost:8080/q/openapi
 ```
 
-### Create Product
-```bash
-curl -X POST http://localhost:8080/api/products \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Laptop","price":1500000,"stock":50}'
-```
+All endpoints are fully documented with:
+- Operation descriptions
+- Request/response schemas
+- Parameter details with UUID v7 examples
+- Response codes and error handling
+- DTO field descriptions and constraints
 
-**Response:**
-```json
-{
-  "id": "019d54c8-1ad8-70c8-8000-0686e5e2d186",
-  "name": "Laptop",
-  "price": 1500000.00,
-  "stock": 50,
-  "createdAt": "2026-04-04T02:18:13.464520",
-  "updatedAt": "2026-04-04T02:18:13.464520"
-}
-```
+### Quick Reference
 
-### Create Transaction
-```bash
-curl -X POST http://localhost:8080/api/transactions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": "019d54c7-d83c-7c28-8000-0682ed879d04",
-    "items": [
-      {"productId": "019d54c8-1ad8-70c8-8000-0686e5e2d186", "quantity": 2}
-    ]
-  }'
-```
+| Resource | Path |
+|----------|------|
+| Users | `/api/users` |
+| Products | `/api/products` |
+| Transactions | `/api/transactions` |
 
-**Response:**
-```json
-{
-  "id": "019d54c9-84c0-77ae-8000-069c7822b826",
-  "userId": "019d54c7-d83c-7c28-8000-0682ed879d04",
-  "totalAmount": 3000000.00,
-  "createdAt": "2026-04-04T02:19:46.112474",
-  "updatedAt": "2026-04-04T02:19:46.112495",
-  "items": [
-    {
-      "productId": "019d54c8-1ad8-70c8-8000-0686e5e2d186",
-      "quantity": 2,
-      "price": 1500000.00
-    }
-  ]
-}
-```
-
-### Update User
-```bash
-curl -X PUT http://localhost:8080/api/users/019d54c7-d83c-7c28-8000-0682ed879d04 \
-  -H "Content-Type: application/json" \
-  -d '{"username":"john_updated","password":"newpass","role":"MANAGER"}'
-```
-
-**Response:**
-```json
-{
-  "id": "019d54c7-d83c-7c28-8000-0682ed879d04",
-  "username": "john_updated",
-  "password": "newpass",
-  "role": "MANAGER",
-  "createdAt": "2026-04-04T02:17:56.413436",
-  "updatedAt": "2026-04-04T02:28:38.730639"
-}
-```
-
-Notice `updatedAt` changes on every update while `createdAt` remains the same.
+For detailed API documentation, use Swagger UI instead of static tables and examples.
 
 ## Project Structure
 
 ```
 sales-system/
 ├── src/main/java/com/sales/
-│   ├── id/
+│   ├── config/
+│   │   └── OpenAPIConfig.java            # OpenAPI/Swagger configuration
+│   ├── util/
 │   │   └── Uuid7Generator.java          # Custom UUID v7 generator
 │   ├── entity/
 │   │   ├── UserEntity.java
@@ -336,6 +252,10 @@ sales-system/
   - `created_at`: Auto-set on insert via JPA `@PrePersist`
   - `updated_at`: Auto-updated on every change via JPA `@PreUpdate`
 - **All DTOs include `createdAt` and `updatedAt` fields** for API responses
+- **API Documentation** - Interactive Swagger UI at `/swagger-ui`
+  - OpenAPI 3.1 spec at `/q/openapi`
+  - All endpoints documented with request/response schemas
+  - No need for static API tables in README
 - Stock validation before creating transaction
 - Transaction management in service layer
 - DTO pattern for API communication
@@ -343,3 +263,4 @@ sales-system/
 - **Quarkus 3.17.0** upgraded from 3.6.0 for Hibernate 6.6.1 support
 - **REST** replaces deprecated `RESTEasy Reactive` in Quarkus 3.17+
 - Environment variables for database credentials (`DB_USERNAME`, `DB_PASSWORD`, `DB_URL`)
+- **`quarkus-smallrye-openapi`** added for Swagger UI support

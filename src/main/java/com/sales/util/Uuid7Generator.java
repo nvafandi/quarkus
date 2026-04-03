@@ -1,4 +1,4 @@
-package com.sales.id;
+package com.sales.util;
 
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.id.UUIDGenerator;
