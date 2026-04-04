@@ -46,8 +46,8 @@ docker compose logs -f keycloak
 |---|---|---|
 | App | http://localhost:8080 | N/A |
 | Swagger UI | http://localhost:8080/swagger-ui | N/A |
-| Keycloak Admin | http://localhost:8180 | admin / admin |
-| PostgreSQL | localhost:5432 | nurvan / kmzwa88saa |
+| Keycloak Admin | http://localhost:8180 | admin / XXX |
+| PostgreSQL | localhost:5432 | XXX / XXX |
 
 ## Keycloak Setup
 
@@ -63,7 +63,7 @@ Keycloak 24+ enables a **User Profile** feature by default that marks `email`, `
 
 ```bash
 ADMIN_TOKEN=$(curl -s -X POST http://localhost:8180/realms/master/protocol/openid-connect/token \
-  -d "client_id=admin-cli&grant_type=password&username=admin&password=admin" \
+  -d "client_id=admin-cli&grant_type=password&username=admin&password=XXX" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 curl -s -X PUT http://localhost:8180/admin/realms/sales-realm/users/profile \
@@ -85,16 +85,16 @@ The Keycloak realm (`sales-realm`) is pre-configured with these users:
 
 | Username | Password | Role |
 |---|---|---|
-| admin | admin123 | ADMIN |
-| cashier1 | cashier123 | CASHIER |
-| manager1 | manager123 | MANAGER |
+| admin | XXX | ADMIN |
+| cashier1 | XXX | CASHIER |
+| manager1 | XXX | MANAGER |
 
 ### Client Configuration
 
 | Setting | Value |
 |---|---|
 | Client ID | `sales-client` |
-| Client Secret | `oqcZx7sKP0CW2NV2yPpN6YiXGit8CtT6` |
+| Client Secret | `XXX` |
 | Type | Confidential |
 | Direct Access Grants | Enabled |
 | Valid Redirect URIs | `http://localhost:8080/*`, `http://localhost:5000/*` |
@@ -155,22 +155,22 @@ docker compose up -d
 ### PostgreSQL
 
 ```bash
-docker run -d --name postgres -e POSTGRES_PASSWORD=kmzwa88saa -p 5432:5432 postgres:17
-docker exec -it postgres psql -U nurvan -d postgres -c "CREATE DATABASE sales_db;"
-docker exec -it postgres psql -U nurvan -d postgres -c "CREATE DATABASE keycloak_db;"
+docker run -d --name postgres -e POSTGRES_PASSWORD=XXX -p 5432:5432 postgres:17
+docker exec -it postgres psql -U XXX -d postgres -c "CREATE DATABASE sales_db;"
+docker exec -it postgres psql -U XXX -d postgres -c "CREATE DATABASE keycloak_db;"
 ```
 
 ### Keycloak
 
 ```bash
 docker run -d --name keycloak \
-  -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  -e KEYCLOAK_ADMIN=XXX -e KEYCLOAK_ADMIN_PASSWORD=XXX \
   -e KC_DB=postgres \
   -e KC_DB_URL_HOST=<postgres-container-ip> \
   -e KC_DB_URL_PORT=5432 \
   -e KC_DB_URL_DATABASE=keycloak_db \
-  -e KC_DB_USERNAME=nurvan \
-  -e KC_DB_PASSWORD=kmzwa88saa \
+  -e KC_DB_USERNAME=XXX \
+  -e KC_DB_PASSWORD=XXX \
   -p 8180:8080 \
   -v $(pwd)/keycloak/realm:/opt/keycloak/data/import \
   quay.io/keycloak/keycloak:24.0 start-dev --import-realm
@@ -188,14 +188,14 @@ After Keycloak starts:
 # Start PostgreSQL container
 docker run -d \
   --name postgres \
-  -e POSTGRES_USER=nurvan \
-  -e POSTGRES_PASSWORD=kmzwa88saa \
+  -e POSTGRES_USER=XXX \
+  -e POSTGRES_PASSWORD=XXX \
   -p 5432:5432 \
   postgres:17
 
 # Create databases
-docker exec -it postgres psql -U nurvan -d postgres -c "CREATE DATABASE sales_db;"
-docker exec -it postgres psql -U nurvan -d postgres -c "CREATE DATABASE keycloak_db;"
+docker exec -it postgres psql -U XXX -d postgres -c "CREATE DATABASE sales_db;"
+docker exec -it postgres psql -U XXX -d postgres -c "CREATE DATABASE keycloak_db;"
 ```
 
 ## DDL Statements
@@ -293,8 +293,8 @@ quarkus.http.port=5000
 
 # Database Configuration - PostgreSQL
 quarkus.datasource.db-kind=postgresql
-quarkus.datasource.username=nurvan
-quarkus.datasource.password=kmzwa88saa
+quarkus.datasource.username=XXX
+quarkus.datasource.password=XXX
 quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/sales_db
 quarkus.datasource.jdbc.max-size=16
 quarkus.datasource.jdbc.min-size=4
@@ -307,7 +307,7 @@ quarkus.hibernate-orm.log.format-sql=true
 # OIDC Configuration (Keycloak)
 quarkus.oidc.auth-server-url=http://localhost:8180/realms/sales-realm
 quarkus.oidc.client-id=sales-client
-quarkus.oidc.credentials.secret=oqcZx7sKP0CW2NV2yPpN6YiXGit8CtT6
+quarkus.oidc.credentials.secret=XXX
 quarkus.oidc.application-type=web-app
 quarkus.oidc.authentication.scopes=openid,profile,email,roles
 quarkus.oidc.roles.role-claim-name=resource_access.${quarkus.oidc.client-id}.roles
@@ -315,8 +315,8 @@ quarkus.oidc.roles.role-claim-name=resource_access.${quarkus.oidc.client-id}.rol
 # Keycloak Admin API Configuration
 keycloak.admin.url=http://localhost:8180
 keycloak.admin.realm=master
-keycloak.admin.username=admin
-keycloak.admin.password=admin
+keycloak.admin.username=XXX
+keycloak.admin.password=XXX
 keycloak.admin.target-realm=sales-realm
 ```
 
@@ -345,10 +345,10 @@ All API endpoints are protected by **Keycloak SSO** using OAuth2/OpenID Connect:
 # 1. Get access token from Keycloak
 TOKEN=$(curl -s -X POST http://localhost:8180/realms/sales-realm/protocol/openid-connect/token \
   -d "client_id=sales-client" \
-  -d "client_secret=oqcZx7sKP0CW2NV2yPpN6YiXGit8CtT6" \
+  -d "client_secret=XXX" \
   -d "grant_type=password" \
   -d "username=admin" \
-  -d "password=admin123" | jq -r '.access_token')
+  -d "password=XXX" | jq -r '.access_token')
 
 # 2. Use token to access API
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/users
