@@ -8,8 +8,8 @@ quarkus.http.port=8080
 
 # Database Configuration - PostgreSQL
 quarkus.datasource.db-kind=postgresql
-quarkus.datasource.username=your_username
-quarkus.datasource.password=your_password
+quarkus.datasource.username=nurvan
+quarkus.datasource.password=kmzwa88saa
 quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/sales_db
 quarkus.datasource.jdbc.max-size=16
 quarkus.datasource.jdbc.min-size=4

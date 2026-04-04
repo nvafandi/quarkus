@@ -1,11 +1,10 @@
 package com.sales.entity;
 
-import com.sales.util.Uuid7Generator;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.GenericGenerator;
+import xyz.block.uuidv7.UUIDv7;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,8 +19,6 @@ import java.util.UUID;
 public class TransactionEntity {
 
     @Id
-    @GeneratedValue(generator = "UUID7")
-    @GenericGenerator(name = "UUID7", strategy = "com.sales.util.Uuid7Generator")
     @Column(columnDefinition = "UUID")
     private UUID id;
 
@@ -43,6 +40,7 @@ public class TransactionEntity {
 
     @PrePersist
     protected void onCreate() {
+        this.id = UUIDv7.generate();
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
