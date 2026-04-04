@@ -15,6 +15,7 @@ A backend sales system built with Quarkus that manages Users, Products, and Tran
 - Hibernate ORM 6.6.1 with Panache
 - REST (Quarkus REST) + JSON-B
 - Bean Validation
+- **BCrypt Password Encryption** (`quarkus-elytron-security`)
 - **Custom UUID v7 Generator** (`com.sales.util.Uuid7Generator`)
 - **Swagger UI / OpenAPI 3.1** for API documentation
 
@@ -149,6 +150,47 @@ quarkus.hibernate-orm.log.sql=true
 quarkus.hibernate-orm.log.format-sql=true
 ```
 
+## Security
+
+### Password Encryption
+
+All user passwords are automatically encrypted using **BCrypt** before storage:
+
+- **Algorithm:** BCrypt with 12 iterations
+- **Salt:** Auto-generated random salt per password
+- **Implementation:** `com.sales.util.PasswordEncoder` using Quarkus `BcryptUtil`
+- **Security:** Passwords are never exposed in API responses (always returns `null`)
+
+**How it works:**
+
+```bash
+# API Request (plain text password)
+POST /api/users
+{
+  "username": "john_doe",
+  "password": "secret123",  ← Will be encrypted automatically
+  "role": "CUSTOMER"
+}
+
+# API Response (password hidden)
+{
+  "id": "019d5759-...",
+  "username": "john_doe",
+  "password": null,         ← Never returned for security
+  "role": "CUSTOMER"
+}
+
+# Database Storage (BCrypt hash)
+$2a$12$LZ3xK9mP2qR4sT6uV8wX0y...  ← Encrypted password
+```
+
+**Features:**
+- ✅ Automatic encryption on user creation
+- ✅ Re-encryption on password update
+- ✅ Password validation (required on create, optional on update)
+- ✅ Industry-standard BCrypt algorithm
+- ✅ Protection against brute-force attacks (computationally expensive)
+
 ## Running the Application
 
 ### Development Mode
@@ -212,7 +254,8 @@ sales-system/
 │   ├── config/
 │   │   └── OpenAPIConfig.java            # OpenAPI/Swagger configuration
 │   ├── util/
-│   │   └── Uuid7Generator.java          # Custom UUID v7 generator
+│   │   ├── Uuid7Generator.java          # Custom UUID v7 generator
+│   │   └── PasswordEncoder.java         # BCrypt password encryption utility
 │   ├── entity/
 │   │   ├── UserEntity.java
 │   │   ├── ProductEntity.java
@@ -252,6 +295,11 @@ sales-system/
   - `created_at`: Auto-set on insert via JPA `@PrePersist`
   - `updated_at`: Auto-updated on every change via JPA `@PreUpdate`
 - **All DTOs include `createdAt` and `updatedAt` fields** for API responses
+- **Password Encryption** - All user passwords are encrypted using BCrypt
+  - BCrypt algorithm with 12 iterations for strong security
+  - Automatic salt generation (unique per password)
+  - Passwords never exposed in API responses
+  - `PasswordEncoder.java` utility wraps Quarkus `BcryptUtil`
 - **API Documentation** - Interactive Swagger UI at `/swagger-ui`
   - OpenAPI 3.1 spec at `/q/openapi`
   - All endpoints documented with request/response schemas
@@ -264,3 +312,4 @@ sales-system/
 - **REST** replaces deprecated `RESTEasy Reactive` in Quarkus 3.17+
 - Environment variables for database credentials (`DB_USERNAME`, `DB_PASSWORD`, `DB_URL`)
 - **`quarkus-smallrye-openapi`** added for Swagger UI support
+- **`quarkus-elytron-security`** added for BCrypt password encryption
