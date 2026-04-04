@@ -23,10 +23,6 @@ public class UserDTO {
     @Schema(description = "User login name", example = "john_doe")
     private String username;
 
-    @Size(max = 100, message = "Password must not exceed 100 characters")
-    @Schema(description = "User password (will be encrypted)", example = "secret123", writeOnly = true)
-    private String password;
-
     @Size(max = 50, message = "Role must not exceed 50 characters")
     @Schema(description = "User role", example = "CASHIER")
     private String role;

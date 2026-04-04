@@ -2,6 +2,7 @@ package com.sales.resource;
 
 import com.sales.dto.TransactionDTO;
 import com.sales.service.TransactionService;
+import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -21,7 +22,8 @@ import java.util.UUID;
 @Path("/api/transactions")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-@Tag(name = "Transactions", description = "Transaction management operations")
+@Authenticated
+@Tag(name = "Transactions", description = "Transaction management operations (requires authentication)")
 public class TransactionResource {
 
     @Inject

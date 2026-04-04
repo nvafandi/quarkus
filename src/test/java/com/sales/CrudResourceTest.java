@@ -1,6 +1,7 @@
 package com.sales;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.*;
 
@@ -11,6 +12,7 @@ import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestSecurity(user = "testuser", roles = {"ADMIN"})
 public class CrudResourceTest {
 
     private static String createdUserId;
@@ -27,7 +29,6 @@ public class CrudResourceTest {
         String json = """
             {
                 "username": "%s",
-                "password": "password123",
                 "role": "ADMIN"
             }
             """.formatted(uniqueUsername);
@@ -41,7 +42,6 @@ public class CrudResourceTest {
             .statusCode(201)
             .body("id", notNullValue())
             .body("username", equalTo(uniqueUsername))
-            .body("password", nullValue())
             .body("role", equalTo("ADMIN"))
             .body("createdAt", notNullValue())
             .body("updatedAt", notNullValue())
@@ -54,17 +54,33 @@ public class CrudResourceTest {
     @Order(2)
     @DisplayName("Create User - Duplicate Username")
     public void testCreateUserDuplicateUsername() {
-        String json = """
+        // First create a user with a specific username
+        String json1 = """
             {
-                "username": "admin",
-                "password": "admin123",
+                "username": "duplicate_test_user",
                 "role": "USER"
             }
             """;
 
         given()
             .contentType(ContentType.JSON)
-            .body(json)
+            .body(json1)
+        .when()
+            .post("/api/users")
+        .then()
+            .statusCode(201);
+
+        // Try to create another user with the same username
+        String json2 = """
+            {
+                "username": "duplicate_test_user",
+                "role": "ADMIN"
+            }
+            """;
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(json2)
         .when()
             .post("/api/users")
         .then()
@@ -73,12 +89,11 @@ public class CrudResourceTest {
 
     @Test
     @Order(3)
-    @DisplayName("Create User - Missing Password")
-    public void testCreateUserMissingPassword() {
+    @DisplayName("Create User - Missing Username")
+    public void testCreateUserMissingUsername() {
         String json = """
             {
-                "username": "no_password_user",
-                "password": "",
+                "username": "",
                 "role": "USER"
             }
             """;
@@ -116,7 +131,6 @@ public class CrudResourceTest {
             .statusCode(200)
             .body("id", equalTo(createdUserId))
             .body("username", startsWith("crud_user_"))
-            .body("password", nullValue())
             .body("role", equalTo("ADMIN"));
     }
 
@@ -155,8 +169,7 @@ public class CrudResourceTest {
             .statusCode(200)
             .body("id", equalTo(createdUserId))
             .body("username", startsWith("crud_user_upd_"))
-            .body("role", equalTo("SUPER_ADMIN"))
-            .body("password", nullValue());
+            .body("role", equalTo("SUPER_ADMIN"));
     }
 
     @Test
@@ -498,7 +511,6 @@ public class CrudResourceTest {
     @Order(30)
     @DisplayName("Delete Transaction - Success")
     public void testDeleteTransaction() {
-        // Transaction deletion may fail due to FK constraints from seed data
         given()
             .pathParam("id", createdTransactionId)
         .when()
@@ -525,7 +537,6 @@ public class CrudResourceTest {
     @Order(32)
     @DisplayName("Delete Product - Success")
     public void testDeleteProduct() {
-        // Product may have FK from seed data transactions; skip actual delete if constrained
         given()
             .pathParam("id", createdProductId)
         .when()
@@ -552,7 +563,6 @@ public class CrudResourceTest {
     @Order(34)
     @DisplayName("Delete User - Success")
     public void testDeleteUser() {
-        // User may have FK from seed data transactions; skip actual delete if constrained
         given()
             .pathParam("id", createdUserId)
         .when()

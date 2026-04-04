@@ -3,7 +3,6 @@ package com.sales.service;
 import com.sales.dto.UserDTO;
 import com.sales.entity.UserEntity;
 import com.sales.repository.UserRepository;
-import com.sales.util.PasswordEncoder;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -42,15 +41,11 @@ public class UserService {
 
     @Transactional
     public UserDTO create(UserDTO userDTO) {
-        if (userDTO.getPassword() == null || userDTO.getPassword().trim().isEmpty()) {
-            throw new WebApplicationException("Password is required", Response.Status.BAD_REQUEST);
-        }
         if (userRepository.findByUsername(userDTO.getUsername()).isPresent()) {
             throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
         }
         UserEntity entity = new UserEntity();
         entity.setUsername(userDTO.getUsername());
-        entity.setPassword(PasswordEncoder.encode(userDTO.getPassword()));
         entity.setRole(userDTO.getRole());
         userRepository.persist(entity);
         return toDTO(entity);
@@ -61,9 +56,6 @@ public class UserService {
         UserEntity entity = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
         entity.setUsername(userDTO.getUsername());
-        if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
-            entity.setPassword(PasswordEncoder.encode(userDTO.getPassword()));
-        }
         entity.setRole(userDTO.getRole());
         return toDTO(entity);
     }
@@ -79,7 +71,6 @@ public class UserService {
         UserDTO dto = new UserDTO();
         dto.setId(entity.getId());
         dto.setUsername(entity.getUsername());
-        dto.setPassword(null); // Never return password hash
         dto.setRole(entity.getRole());
         dto.setCreatedAt(entity.getCreatedAt());
         dto.setUpdatedAt(entity.getUpdatedAt());

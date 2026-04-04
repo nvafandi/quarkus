@@ -1,6 +1,7 @@
 package com.sales;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
@@ -12,9 +13,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for entity ID generation using UUIDv7.
- * Requires database connection to verify UUIDv7 is correctly generated in @PrePersist.
  */
 @QuarkusTest
+@TestSecurity(user = "testuser", roles = {"ADMIN"})
 public class EntityIdGenerationTest {
 
     @Inject
@@ -25,7 +26,6 @@ public class EntityIdGenerationTest {
     public void testEntityIdGeneration_UserEntity() {
         com.sales.entity.UserEntity user = new com.sales.entity.UserEntity();
         user.setUsername("test_uuid_user_" + System.currentTimeMillis());
-        user.setPassword("password123");
         user.setRole("TESTER");
         
         entityManager.persist(user);
@@ -56,7 +56,6 @@ public class EntityIdGenerationTest {
     public void testEntityIdGeneration_TransactionEntity() {
         com.sales.entity.UserEntity user = new com.sales.entity.UserEntity();
         user.setUsername("test_txn_user_" + System.currentTimeMillis());
-        user.setPassword("password123");
         user.setRole("TESTER");
         entityManager.persist(user);
         
@@ -76,7 +75,6 @@ public class EntityIdGenerationTest {
     public void testEntityIdGeneration_TransactionItemEntity() {
         com.sales.entity.UserEntity user = new com.sales.entity.UserEntity();
         user.setUsername("test_item_user_" + System.currentTimeMillis());
-        user.setPassword("password123");
         user.setRole("TESTER");
         entityManager.persist(user);
         

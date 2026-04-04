@@ -1,0 +1,174 @@
+{
+  "id": "sales-realm",
+  "realm": "sales-realm",
+  "displayName": "Sales System",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "roles": {
+    "realm": [],
+    "client": {
+      "sales-client": [
+        {
+          "name": "ADMIN",
+          "description": "Administrator role",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "CASHIER",
+          "description": "Cashier role",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "MANAGER",
+          "description": "Manager role",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "CUSTOMER",
+          "description": "Customer role",
+          "composite": false,
+          "clientRole": true
+        }
+      ]
+    }
+  },
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "sales-client": ["ADMIN"]
+      }
+    },
+    {
+      "username": "cashier1",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "cashier123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "sales-client": ["CASHIER"]
+      }
+    },
+    {
+      "username": "manager1",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "manager123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "sales-client": ["MANAGER"]
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "sales-client",
+      "name": "Sales System Client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "your_client_secret",
+      "redirectUris": [
+        "http://localhost:8080/*",
+        "http://localhost:8080/api/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8080"
+      ],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "3600",
+        "sso.session.idle.timeout": "1800",
+        "sso.session.max.lifespan": "36000"
+      },
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "roles",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "client roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "resource_access.${client_id}.roles",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        },
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": [
+    "web-origins",
+    "acr",
+    "roles",
+    "profile",
+    "email"
+  ]
+}

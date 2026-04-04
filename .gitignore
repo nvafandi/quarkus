@@ -41,6 +41,7 @@ nb-configuration.xml
 
 # Backup files (credentials masking workflow)
 *.bak
+*.local
 
 # Plugin directory
 /.quarkus/cli/plugins/

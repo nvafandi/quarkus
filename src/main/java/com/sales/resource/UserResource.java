@@ -22,7 +22,8 @@ import java.util.UUID;
 @Path("/api/users")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-@Tag(name = "Users", description = "User management operations")
+@Authenticated
+@Tag(name = "Users", description = "User management operations (requires authentication)")
 public class UserResource {
 
     @Inject
@@ -31,6 +32,7 @@ public class UserResource {
     @GET
     @Operation(summary = "Get all users", description = "Retrieve a list of all users")
     @APIResponse(responseCode = "200", description = "List of users retrieved successfully")
+    @APIResponse(responseCode = "401", description = "Unauthorized - valid token required")
     public Response findAll() {
         return Response.ok(userService.findAll()).build();
     }
@@ -39,6 +41,7 @@ public class UserResource {
     @Path("/{id}")
     @Operation(summary = "Get user by ID", description = "Retrieve a user by their UUID")
     @APIResponse(responseCode = "200", description = "User found")
+    @APIResponse(responseCode = "401", description = "Unauthorized")
     @APIResponse(responseCode = "404", description = "User not found")
     public Response findById(
             @Parameter(description = "User UUID", example = "019d54c7-d83c-7c28-8000-0682ed879d04")
@@ -49,6 +52,7 @@ public class UserResource {
     @POST
     @Operation(summary = "Create user", description = "Create a new user account")
     @APIResponse(responseCode = "201", description = "User created successfully")
+    @APIResponse(responseCode = "401", description = "Unauthorized")
     @APIResponse(responseCode = "409", description = "Username already exists")
     public Response create(
             @RequestBody(description = "User data", required = true,
@@ -62,6 +66,7 @@ public class UserResource {
     @Path("/{id}")
     @Operation(summary = "Update user", description = "Update an existing user")
     @APIResponse(responseCode = "200", description = "User updated successfully")
+    @APIResponse(responseCode = "401", description = "Unauthorized")
     @APIResponse(responseCode = "404", description = "User not found")
     public Response update(
             @Parameter(description = "User UUID") @PathParam("id") UUID id,
@@ -73,6 +78,7 @@ public class UserResource {
     @Path("/{id}")
     @Operation(summary = "Delete user", description = "Delete a user by UUID")
     @APIResponse(responseCode = "204", description = "User deleted successfully")
+    @APIResponse(responseCode = "401", description = "Unauthorized")
     @APIResponse(responseCode = "404", description = "User not found")
     public Response delete(
             @Parameter(description = "User UUID") @PathParam("id") UUID id) {

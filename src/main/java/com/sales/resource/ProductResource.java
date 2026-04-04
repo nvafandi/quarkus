@@ -2,6 +2,7 @@ package com.sales.resource;
 
 import com.sales.dto.ProductDTO;
 import com.sales.service.ProductService;
+import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -21,7 +22,8 @@ import java.util.UUID;
 @Path("/api/products")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-@Tag(name = "Products", description = "Product management operations")
+@Authenticated
+@Tag(name = "Products", description = "Product management operations (requires authentication)")
 public class ProductResource {
 
     @Inject
