@@ -2,13 +2,12 @@ package com.sales.service;
 
 import com.sales.dto.UserDTO;
 import com.sales.entity.UserEntity;
+import com.sales.exception.ConflictException;
+import com.sales.exception.ResourceNotFoundException;
 import com.sales.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,19 +29,19 @@ public class UserService {
     public UserDTO findById(UUID id) {
         return userRepository.findById(id)
                 .map(this::toDTO)
-                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
     }
 
     public UserDTO findByUsername(String username) {
         return userRepository.findByUsername(username)
                 .map(this::toDTO)
-                .orElseThrow(() -> new NotFoundException("User not found with username: " + username));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
     }
 
     @Transactional
     public UserDTO create(UserDTO userDTO) {
         if (userRepository.findByUsername(userDTO.getUsername()).isPresent()) {
-            throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
+            throw new ConflictException("Username already exists");
         }
         UserEntity entity = new UserEntity();
         entity.setUsername(userDTO.getUsername());
@@ -54,7 +53,7 @@ public class UserService {
     @Transactional
     public UserDTO update(UUID id, UserDTO userDTO) {
         UserEntity entity = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         entity.setUsername(userDTO.getUsername());
         entity.setRole(userDTO.getRole());
         return toDTO(entity);
@@ -63,7 +62,7 @@ public class UserService {
     @Transactional
     public void delete(UUID id) {
         userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         userRepository.deleteById(id);
     }
 

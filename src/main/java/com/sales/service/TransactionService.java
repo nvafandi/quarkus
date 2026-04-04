@@ -6,15 +6,14 @@ import com.sales.entity.ProductEntity;
 import com.sales.entity.TransactionEntity;
 import com.sales.entity.TransactionItemEntity;
 import com.sales.entity.UserEntity;
+import com.sales.exception.BadRequestException;
+import com.sales.exception.ResourceNotFoundException;
 import com.sales.repository.ProductRepository;
 import com.sales.repository.TransactionRepository;
 import com.sales.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -43,7 +42,7 @@ public class TransactionService {
     public TransactionDTO findById(UUID id) {
         return transactionRepository.findById(id)
                 .map(this::toDTO)
-                .orElseThrow(() -> new NotFoundException("Transaction not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with id: " + id));
     }
 
     public List<TransactionDTO> findByUserId(UUID userId) {
@@ -56,7 +55,7 @@ public class TransactionService {
     @Transactional
     public TransactionDTO create(TransactionDTO transactionDTO) {
         UserEntity user = userRepository.findById(transactionDTO.getUserId())
-                .orElseThrow(() -> new NotFoundException("User not found with id: " + transactionDTO.getUserId()));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + transactionDTO.getUserId()));
 
         TransactionEntity transaction = new TransactionEntity();
         transaction.setUser(user);
@@ -65,13 +64,10 @@ public class TransactionService {
 
         for (TransactionItemDTO itemDTO : transactionDTO.getItems()) {
             ProductEntity product = productRepository.findById(itemDTO.getProductId())
-                    .orElseThrow(() -> new NotFoundException("Product not found with id: " + itemDTO.getProductId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + itemDTO.getProductId()));
 
             if (product.getStock() < itemDTO.getQuantity()) {
-                throw new WebApplicationException(
-                        "Insufficient stock for product: " + product.getName(),
-                        Response.Status.BAD_REQUEST
-                );
+                throw new BadRequestException("Insufficient stock for product: " + product.getName());
             }
 
             product.setStock(product.getStock() - itemDTO.getQuantity());
@@ -95,7 +91,7 @@ public class TransactionService {
     @Transactional
     public void delete(UUID id) {
         transactionRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Transaction not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with id: " + id));
         transactionRepository.deleteById(id);
     }
 

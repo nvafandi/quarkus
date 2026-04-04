@@ -29,8 +29,10 @@ public class UserResourceTest {
             .post("/api/users")
         .then()
             .statusCode(201)
-            .body("username", equalTo(uniqueUsername))
-            .body("role", equalTo("USER"));
+            .body("success", equalTo(true))
+            .body("status", equalTo(201))
+            .body("data.username", equalTo(uniqueUsername))
+            .body("data.role", equalTo("USER"));
     }
 
     @Test

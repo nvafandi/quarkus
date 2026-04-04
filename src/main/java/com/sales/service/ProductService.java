@@ -2,11 +2,12 @@ package com.sales.service;
 
 import com.sales.dto.ProductDTO;
 import com.sales.entity.ProductEntity;
+import com.sales.exception.BadRequestException;
+import com.sales.exception.ResourceNotFoundException;
 import com.sales.repository.ProductRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.NotFoundException;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,7 +29,7 @@ public class ProductService {
     public ProductDTO findById(UUID id) {
         return productRepository.findById(id)
                 .map(this::toDTO)
-                .orElseThrow(() -> new NotFoundException("Product not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
 
     @Transactional
@@ -44,7 +45,7 @@ public class ProductService {
     @Transactional
     public ProductDTO update(UUID id, ProductDTO productDTO) {
         ProductEntity entity = productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Product not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
         entity.setName(productDTO.getName());
         entity.setPrice(productDTO.getPrice());
         entity.setStock(productDTO.getStock());
@@ -54,16 +55,16 @@ public class ProductService {
     @Transactional
     public void delete(UUID id) {
         productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Product not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
         productRepository.deleteById(id);
     }
 
     @Transactional
     public void decreaseStock(UUID productId, int quantity) {
         ProductEntity entity = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
         if (entity.getStock() < quantity) {
-            throw new IllegalStateException("Insufficient stock for product: " + productId);
+            throw new BadRequestException("Insufficient stock for product: " + productId);
         }
         entity.setStock(entity.getStock() - quantity);
     }

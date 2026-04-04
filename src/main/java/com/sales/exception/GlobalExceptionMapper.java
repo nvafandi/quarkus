@@ -1,7 +1,7 @@
-package com.sales.resource;
+package com.sales.exception;
 
-import com.sales.dto.ErrorResponse;
-import jakarta.ws.rs.NotFoundException;
+import com.sales.dto.ApiResponse;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
@@ -21,9 +21,9 @@ public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
             WebApplicationException webEx = (WebApplicationException) exception;
             status = webEx.getResponse().getStatus();
             message = webEx.getMessage() != null ? webEx.getMessage() : "Web application error";
-        } else if (exception instanceof jakarta.validation.ConstraintViolationException) {
+        } else if (exception instanceof ConstraintViolationException) {
             status = Response.Status.BAD_REQUEST.getStatusCode();
-            jakarta.validation.ConstraintViolationException cve = (jakarta.validation.ConstraintViolationException) exception;
+            ConstraintViolationException cve = (ConstraintViolationException) exception;
             message = cve.getConstraintViolations().stream()
                     .map(v -> v.getPropertyPath() + ": " + v.getMessage())
                     .collect(Collectors.joining(", "));
@@ -33,7 +33,7 @@ public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
         }
 
         return Response.status(status)
-                .entity(new ErrorResponse(status, message))
+                .entity(ApiResponse.error(status, message))
                 .build();
     }
 }

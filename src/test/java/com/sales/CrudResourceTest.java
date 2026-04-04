@@ -40,14 +40,16 @@ public class CrudResourceTest {
             .post("/api/users")
         .then()
             .statusCode(201)
-            .body("id", notNullValue())
-            .body("username", equalTo(uniqueUsername))
-            .body("role", equalTo("ADMIN"))
-            .body("createdAt", notNullValue())
-            .body("updatedAt", notNullValue())
+            .body("success", equalTo(true))
+            .body("status", equalTo(201))
+            .body("data.id", notNullValue())
+            .body("data.username", equalTo(uniqueUsername))
+            .body("data.role", equalTo("ADMIN"))
+            .body("data.createdAt", notNullValue())
+            .body("data.updatedAt", notNullValue())
             .extract()
             .jsonPath()
-            .getString("id");
+            .getString("data.id");
     }
 
     @Test
@@ -129,9 +131,9 @@ public class CrudResourceTest {
             .get("/api/users/{id}")
         .then()
             .statusCode(200)
-            .body("id", equalTo(createdUserId))
-            .body("username", startsWith("crud_user_"))
-            .body("role", equalTo("ADMIN"));
+            .body("data.id", equalTo(createdUserId))
+            .body("data.username", startsWith("crud_user_"))
+            .body("data.role", equalTo("ADMIN"));
     }
 
     @Test
@@ -167,9 +169,9 @@ public class CrudResourceTest {
             .put("/api/users/{id}")
         .then()
             .statusCode(200)
-            .body("id", equalTo(createdUserId))
-            .body("username", startsWith("crud_user_upd_"))
-            .body("role", equalTo("SUPER_ADMIN"));
+            .body("data.id", equalTo(createdUserId))
+            .body("data.username", startsWith("crud_user_upd_"))
+            .body("data.role", equalTo("SUPER_ADMIN"));
     }
 
     @Test
@@ -215,15 +217,17 @@ public class CrudResourceTest {
             .post("/api/products")
         .then()
             .statusCode(201)
-            .body("id", notNullValue())
-            .body("name", equalTo("Test Product"))
-            .body("price", equalTo(150000.00f))
-            .body("stock", equalTo(100))
-            .body("createdAt", notNullValue())
-            .body("updatedAt", notNullValue())
+            .body("success", equalTo(true))
+            .body("status", equalTo(201))
+            .body("data.id", notNullValue())
+            .body("data.name", equalTo("Test Product"))
+            .body("data.price", equalTo(150000.00f))
+            .body("data.stock", equalTo(100))
+            .body("data.createdAt", notNullValue())
+            .body("data.updatedAt", notNullValue())
             .extract()
             .jsonPath()
-            .getString("id");
+            .getString("data.id");
     }
 
     @Test
@@ -290,10 +294,10 @@ public class CrudResourceTest {
             .get("/api/products/{id}")
         .then()
             .statusCode(200)
-            .body("id", equalTo(createdProductId))
-            .body("name", equalTo("Test Product"))
-            .body("price", equalTo(150000.00f))
-            .body("stock", equalTo(100));
+            .body("data.id", equalTo(createdProductId))
+            .body("data.name", equalTo("Test Product"))
+            .body("data.price", equalTo(150000.00f))
+            .body("data.stock", equalTo(100));
     }
 
     @Test
@@ -330,10 +334,10 @@ public class CrudResourceTest {
             .put("/api/products/{id}")
         .then()
             .statusCode(200)
-            .body("id", equalTo(createdProductId))
-            .body("name", equalTo("Updated Product"))
-            .body("price", equalTo(200000.00f))
-            .body("stock", equalTo(50));
+            .body("data.id", equalTo(createdProductId))
+            .body("data.name", equalTo("Updated Product"))
+            .body("data.price", equalTo(200000.00f))
+            .body("data.stock", equalTo(50));
     }
 
     @Test
@@ -384,18 +388,20 @@ public class CrudResourceTest {
             .post("/api/transactions")
         .then()
             .statusCode(201)
-            .body("id", notNullValue())
-            .body("userId", equalTo(createdUserId))
-            .body("totalAmount", equalTo(400000.00f))
-            .body("items", hasSize(1))
-            .body("items[0].productId", equalTo(createdProductId))
-            .body("items[0].quantity", equalTo(2))
-            .body("items[0].price", equalTo(200000.00f))
-            .body("createdAt", notNullValue())
-            .body("updatedAt", notNullValue())
+            .body("success", equalTo(true))
+            .body("status", equalTo(201))
+            .body("data.id", notNullValue())
+            .body("data.userId", equalTo(createdUserId))
+            .body("data.totalAmount", equalTo(400000.00f))
+            .body("data.items", hasSize(1))
+            .body("data.items[0].productId", equalTo(createdProductId))
+            .body("data.items[0].quantity", equalTo(2))
+            .body("data.items[0].price", equalTo(200000.00f))
+            .body("data.createdAt", notNullValue())
+            .body("data.updatedAt", notNullValue())
             .extract()
             .jsonPath()
-            .getString("id");
+            .getString("data.id");
     }
 
     @Test

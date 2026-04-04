@@ -1,5 +1,6 @@
 package com.sales.resource;
 
+import com.sales.dto.ApiResponse;
 import io.quarkus.oidc.IdToken;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
@@ -27,7 +28,7 @@ public class AuthResource {
     public Response getUserInfo() {
         if (identity.isAnonymous()) {
             return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity(Map.of("error", "Not authenticated"))
+                    .entity(ApiResponse.error(Response.Status.UNAUTHORIZED.getStatusCode(), "Not authenticated"))
                     .build();
         }
 
@@ -39,7 +40,7 @@ public class AuthResource {
         userInfo.put("roles", roles);
         userInfo.put("authenticated", true);
 
-        return Response.ok(userInfo).build();
+        return Response.ok(ApiResponse.ok(userInfo)).build();
     }
 
     @GET
@@ -47,11 +48,13 @@ public class AuthResource {
     @Operation(summary = "Get current user roles", description = "Returns roles assigned to the currently authenticated user")
     public Response getUserRoles() {
         if (identity.isAnonymous()) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(ApiResponse.error(Response.Status.UNAUTHORIZED.getStatusCode(), "Not authenticated"))
+                    .build();
         }
 
         List<String> roles = identity.getRoles().stream().toList();
-        return Response.ok(Map.of("roles", roles)).build();
+        return Response.ok(ApiResponse.ok(Map.of("roles", roles))).build();
     }
 
     @GET
@@ -59,6 +62,6 @@ public class AuthResource {
     @Operation(summary = "Check authentication", description = "Returns whether the user is authenticated")
     public Response checkAuth() {
         boolean authenticated = !identity.isAnonymous();
-        return Response.ok(Map.of("authenticated", authenticated)).build();
+        return Response.ok(ApiResponse.ok(Map.of("authenticated", authenticated))).build();
     }
 }

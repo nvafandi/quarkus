@@ -475,7 +475,9 @@ sales-system/
     ├── UuidV7GenerationTest.java     # UUIDv7 unit tests
     ├── EntityIdGenerationTest.java   # Entity ID integration tests
     ├── CrudResourceTest.java         # Full CRUD API tests
-    └── UserResourceTest.java         # User API tests
+    ├── UserResourceTest.java         # User API tests
+    ├── KeycloakAdminClientTest.java  # KeycloakAdminClient service tests
+    └── KeycloakUserResourceTest.java # Keycloak user management API tests
 ```
 
 ## Testing
@@ -507,7 +509,25 @@ sales-system/
 | `EntityIdGenerationTest` | 4 | Entity ID generation for all 4 entity types |
 | `CrudResourceTest` | 29 | Full CRUD operations for Users, Products, and Transactions |
 | `UserResourceTest` | 3 | Basic user API integration tests |
-| **Total** | **42** | |
+| `KeycloakAdminClientTest` | 12 | KeycloakAdminClient service layer tests |
+| `KeycloakUserResourceTest` | 13 | Keycloak user management API endpoint tests |
+| **Total** | **67** | |
+
+### Test Structure
+
+**Service Layer Tests (`KeycloakAdminClientTest`)**
+- Tests all methods in the Keycloak Admin API client
+- Handles both scenarios: Keycloak available and unavailable
+- Validates error handling (404, 400, 500 status codes)
+- Includes user creation with cleanup and role assignment
+- Tests role management (get, assign, list available)
+
+**Resource Layer Tests (`KeycloakUserResourceTest`)**
+- Tests all REST endpoints for Keycloak user management
+- Validates request payloads (password required, roles required)
+- Tests error scenarios (missing fields, non-existent users)
+- Uses flexible status code matchers for different environments
+- Includes security context with `@TestSecurity`
 
 ## Credential Management
 
@@ -548,3 +568,85 @@ cp docker-compose.yml.example docker-compose.yml
 - **Tests use H2 database + @TestSecurity** for fast, isolated test execution
 - **Keycloak 24.0** — Do not upgrade to 25/26 (credential persistence bug)
 - **Quarkus app listens on port 5000** internally, Docker maps to host port 8080
+
+## API Response Format
+
+All API responses follow a unified `ApiResponse<T>` wrapper with HTTP status codes:
+
+### Success Response Format
+
+**200 OK (GET, PUT):**
+```json
+{
+  "success": true,
+  "status": 200,
+  "data": { /* response payload */ },
+  "message": null
+}
+```
+
+**201 Created (POST):**
+```json
+{
+  "success": true,
+  "status": 201,
+  "data": { /* created resource */ },
+  "message": "Resource created"
+}
+```
+
+**204 No Content (DELETE):**
+- Returns empty body (no response wrapper)
+
+### Error Response Format
+
+```json
+{
+  "success": false,
+  "status": 400,  // or 401, 404, 409, 500
+  "data": null,
+  "message": "Descriptive error message"
+}
+```
+
+### Response Wrapper Implementation
+
+- **`ApiResponse<T>`** - Generic response wrapper in `com.sales.dto.ApiResponse`
+- **`ApiResponseFilter`** - JAX-RS filter that automatically wraps 2xx success responses
+- **Exception Mappers** - Convert exceptions to proper `ApiResponse` error responses
+- **Status Codes** - All responses include HTTP status code in the `status` field
+
+### Common Status Codes
+
+| Status | Usage |
+|--------|-------|
+| 200 | Successful GET/PUT operations |
+| 201 | Successful POST (resource created) |
+| 204 | Successful DELETE (no content) |
+| 400 | Bad request, validation errors, insufficient stock |
+| 401 | Unauthorized (not authenticated) |
+| 404 | Resource not found |
+| 409 | Conflict (duplicate username) |
+| 500 | Internal server error |
+
+### Test Considerations
+
+When writing tests against the API, access response data through the `data` field:
+
+```java
+// Correct - access nested data field
+.body("data.username", equalTo("testuser"))
+.body("data.id", notNullValue())
+
+// Incorrect - direct field access (old format)
+.body("username", equalTo("testuser"))
+```
+
+Error responses can be validated by status code:
+
+```java
+.statusCode(400)
+.statusCode(404)
+.statusCode(409)
+.statusCode(500)
+```
