@@ -509,24 +509,20 @@ sales-system/
 | `UserResourceTest` | 3 | Basic user API integration tests |
 | **Total** | **42** | |
 
-## Credential Masking (Before Push)
+## Credential Management
 
-Credentials in `application.properties` are automatically masked before pushing to GitHub using the safe push script.
+Credentials are **never committed** to the repository. The following files are excluded via `.gitignore`:
 
-### Quick Push (Recommended)
+- `src/main/resources/application.properties` — Contains database passwords and OIDC secrets
+- `docker-compose.yml` — Contains actual passwords for PostgreSQL and Keycloak
+
+These files must be configured locally from the `.example` templates:
+
 ```bash
-./git-push-safe.sh
+cp src/main/resources/application.properties.example src/main/resources/application.properties
+cp docker-compose.yml.example docker-compose.yml
+# Edit with your actual credentials
 ```
-
-This script automatically:
-1. Backs up real credentials to `application.properties.bak`
-2. Replaces them with `your_username` / `your_password`
-3. Commits and pushes the masked version
-4. Restores real credentials locally
-5. Commits the restore locally (not pushed)
-
-### Gitignore Rules
-The `.gitignore` excludes `*.bak` files to prevent backed-up credentials from being tracked.
 
 ## Notes
 - **Authentication via Keycloak SSO** - All API endpoints protected by OAuth2/OIDC
