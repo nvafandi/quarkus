@@ -14,6 +14,10 @@ public class UserRepository implements PanacheRepository<UserEntity> {
         return find("username", username).firstResultOptional();
     }
 
+    public Optional<UserEntity> findByKeycloakId(String keycloakId) {
+        return find("keycloakId", keycloakId).firstResultOptional();
+    }
+
     public Optional<UserEntity> findById(UUID id) {
         return find("id", id).firstResultOptional();
     }

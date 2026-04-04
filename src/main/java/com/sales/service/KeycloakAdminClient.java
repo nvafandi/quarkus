@@ -332,6 +332,8 @@ public class KeycloakAdminClient {
             String url = keycloakUrl + "/admin/realms/" + targetRealm + "/users/" + userId + "/role-mappings/clients/" + salesClientId;
 
             ArrayNode rolesArray = MAPPER.createArrayNode();
+            List<String> skippedRoles = new java.util.ArrayList<>();
+
             for (String roleName : roles) {
                 String roleUrl = keycloakUrl + "/admin/realms/" + targetRealm + "/clients/" + salesClientId + "/roles/" + roleName;
                 HttpRequest roleRequest = authenticatedRequest(roleUrl).GET().build();
@@ -341,9 +343,16 @@ public class KeycloakAdminClient {
                     JsonNode roleJson = MAPPER.readTree(roleResponse.body());
                     rolesArray.add(roleJson);
                 } else {
-                    throw new WebApplicationException("Role not found: " + roleName,
-                            Response.Status.BAD_REQUEST);
+                    // Log warning and skip missing roles instead of failing
+                    System.err.println("[WARN] Role not found: " + roleName + " - skipping");
+                    skippedRoles.add(roleName);
                 }
+            }
+
+            // Only assign if we found at least one valid role
+            if (rolesArray.isEmpty()) {
+                System.err.println("[WARN] No valid roles found for user " + userId + ". Skipped: " + skippedRoles);
+                return;
             }
 
             HttpRequest request = authenticatedRequest(url)

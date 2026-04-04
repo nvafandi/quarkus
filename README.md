@@ -472,12 +472,15 @@ sales-system/
 ├── src/main/resources/
 │   └── application.properties        # OIDC config + DB config
 └── src/test/java/com/sales/
-    ├── UuidV7GenerationTest.java     # UUIDv7 unit tests
-    ├── EntityIdGenerationTest.java   # Entity ID integration tests
-    ├── CrudResourceTest.java         # Full CRUD API tests
-    ├── UserResourceTest.java         # User API tests
-    ├── KeycloakAdminClientTest.java  # KeycloakAdminClient service tests
-    └── KeycloakUserResourceTest.java # Keycloak user management API tests
+    ├── UuidV7GenerationTest.java              # UUIDv7 unit tests
+    ├── EntityIdGenerationTest.java            # Entity ID integration tests
+    ├── CrudResourceTest.java                  # Full CRUD API tests
+    ├── UserResourceTest.java                  # User API tests
+    ├── KeycloakAdminClientTest.java           # KeycloakAdminClient service tests
+    ├── KeycloakUserResourceTest.java          # Keycloak user management API tests
+    ├── UserSyncServiceTest.java               # User sync (Keycloak ↔ Local DB) tests
+    ├── InsertAndVerify100ProductsTest.java    # Product creation with user tracking tests
+    └── CreateUserEndpointTest.java            # Keycloak user creation endpoint tests
 ```
 
 ## Testing
@@ -511,7 +514,10 @@ sales-system/
 | `UserResourceTest` | 3 | Basic user API integration tests |
 | `KeycloakAdminClientTest` | 12 | KeycloakAdminClient service layer tests |
 | `KeycloakUserResourceTest` | 13 | Keycloak user management API endpoint tests |
-| **Total** | **67** | |
+| `UserSyncServiceTest` | 6 | Keycloak ↔ Local DB user synchronization tests |
+| `InsertAndVerify100ProductsTest` | 3 | Product creation with user tracking verification |
+| `CreateUserEndpointTest` | 4 | Keycloak user creation endpoint tests |
+| **Total** | **80** | |
 
 ### Test Structure
 
@@ -543,6 +549,70 @@ cp src/main/resources/application.properties.example src/main/resources/applicat
 cp docker-compose.yml.example docker-compose.yml
 # Edit with your actual credentials
 ```
+
+## Keycloak-User Synchronization
+
+When a user is created in Keycloak, a corresponding record is automatically created in the local `users` table.
+
+### How It Works
+
+**On User Creation (`POST /api/keycloak/users`):**
+1. User created in Keycloak via Admin API
+2. Password set via Keycloak reset-password endpoint
+3. Roles assigned (if they exist in Keycloak)
+4. `UserSyncService` creates local `UserEntity` with `keycloakId`
+5. Returns `UserDTO` with both local UUID v7 ID and Keycloak UUID
+
+**On First Login (via `UserSyncFilter`):**
+1. User authenticates via Keycloak OIDC
+2. JWT token validated by `quarkus-oidc`
+3. `UserSyncFilter` intercepts request after authentication
+4. Looks up local user by Keycloak username
+5. If not found → auto-creates local user record
+6. Request continues to endpoint
+
+### User Entity Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Local UUID v7 primary key |
+| `keycloakId` | String | Keycloak user UUID (links to Keycloak) |
+| `username` | String | Username (from Keycloak) |
+| `role` | String | Role assigned from Keycloak roles |
+| `createdAt` | LocalDateTime | Record creation timestamp |
+| `updatedAt` | LocalDateTime | Record last update timestamp |
+
+### Configuration
+
+```properties
+# Enable/disable auto-sync on login (default: true)
+keycloak.admin.sync-users-on-login=true
+```
+
+## Product Audit Fields
+
+Products track who created and last updated them via `createdBy` and `updatedBy` fields.
+
+### Product Entity Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Product UUID v7 primary key |
+| `name` | String | Product name |
+| `price` | BigDecimal | Product price |
+| `stock` | Integer | Available stock quantity |
+| `createdBy` | UUID | User who created the product |
+| `updatedBy` | UUID | User who last updated the product |
+| `createdAt` | LocalDateTime | Creation timestamp |
+| `updatedAt` | LocalDateTime | Last update timestamp |
+
+### How User Tracking Works
+
+1. Authenticated user calls `POST /api/products` or `PUT /api/products/{id}`
+2. `ProductResource` extracts username from `SecurityIdentity`
+3. Looks up local user by Keycloak username via `UserService.findByKeycloakId()`
+4. If user doesn't exist → auto-creates via `createOrUpdateFromKeycloak()`
+5. Local user's UUID stored in `createdBy` / `updatedBy`
 
 ## Notes
 - **Authentication via Keycloak SSO** - All API endpoints protected by OAuth2/OIDC

@@ -35,6 +35,12 @@ public class ProductEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "created_by", columnDefinition = "UUID")
+    private UUID createdBy;
+
+    @Column(name = "updated_by", columnDefinition = "UUID")
+    private UUID updatedBy;
+
     @PrePersist
     protected void onCreate() {
         this.id = UUIDv7.generate();

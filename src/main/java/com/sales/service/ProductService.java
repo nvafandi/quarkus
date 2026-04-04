@@ -33,22 +33,25 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductDTO create(ProductDTO productDTO) {
+    public ProductDTO create(ProductDTO productDTO, UUID userId) {
         ProductEntity entity = new ProductEntity();
         entity.setName(productDTO.getName());
         entity.setPrice(productDTO.getPrice());
         entity.setStock(productDTO.getStock());
+        entity.setCreatedBy(userId);
+        entity.setUpdatedBy(userId);
         productRepository.persist(entity);
         return toDTO(entity);
     }
 
     @Transactional
-    public ProductDTO update(UUID id, ProductDTO productDTO) {
+    public ProductDTO update(UUID id, ProductDTO productDTO, UUID userId) {
         ProductEntity entity = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
         entity.setName(productDTO.getName());
         entity.setPrice(productDTO.getPrice());
         entity.setStock(productDTO.getStock());
+        entity.setUpdatedBy(userId);
         return toDTO(entity);
     }
 
@@ -70,6 +73,15 @@ public class ProductService {
     }
 
     private ProductDTO toDTO(ProductEntity entity) {
-        return new ProductDTO(entity.getId(), entity.getName(), entity.getPrice(), entity.getStock(), entity.getCreatedAt(), entity.getUpdatedAt());
+        return new ProductDTO(
+                entity.getId(),
+                entity.getName(),
+                entity.getPrice(),
+                entity.getStock(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt(),
+                entity.getCreatedBy(),
+                entity.getUpdatedBy()
+        );
     }
 }

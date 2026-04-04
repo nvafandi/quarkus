@@ -60,7 +60,7 @@ services:
       QUARKUS_OIDC_CLIENT_ID: sales-client
       QUARKUS_OIDC_CREDENTIALS_SECRET: your_client_secret
     ports:
-      - "8080:8080"
+      - "8080:5000"
     depends_on:
       postgres:
         condition: service_healthy

@@ -38,4 +38,10 @@ public class ProductDTO {
 
     @Schema(description = "Record last update timestamp")
     private LocalDateTime updatedAt;
+
+    @Schema(description = "User who created this product")
+    private UUID createdBy;
+
+    @Schema(description = "User who last updated this product")
+    private UUID updatedBy;
 }

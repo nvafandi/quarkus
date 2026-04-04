@@ -46,8 +46,38 @@ public class UserService {
         UserEntity entity = new UserEntity();
         entity.setUsername(userDTO.getUsername());
         entity.setRole(userDTO.getRole());
+        entity.setKeycloakId(userDTO.getKeycloakId());
         userRepository.persist(entity);
         return toDTO(entity);
+    }
+
+    @Transactional
+    public UserDTO createOrUpdateFromKeycloak(String keycloakId, String username, String role) {
+        UserEntity entity = userRepository.findByKeycloakId(keycloakId)
+                .orElseGet(() -> {
+                    UserEntity newEntity = new UserEntity();
+                    newEntity.setKeycloakId(keycloakId);
+                    newEntity.setUsername(username);
+                    newEntity.setRole(role != null ? role : "USER");
+                    return newEntity;
+                });
+
+        entity.setUsername(username);
+        if (role != null) {
+            entity.setRole(role);
+        }
+
+        if (entity.getId() == null) {
+            userRepository.persist(entity);
+        }
+
+        return toDTO(entity);
+    }
+
+    public UserDTO findByKeycloakId(String keycloakId) {
+        return userRepository.findByKeycloakId(keycloakId)
+                .map(this::toDTO)
+                .orElse(null);
     }
 
     @Transactional
@@ -69,6 +99,7 @@ public class UserService {
     private UserDTO toDTO(UserEntity entity) {
         UserDTO dto = new UserDTO();
         dto.setId(entity.getId());
+        dto.setKeycloakId(entity.getKeycloakId());
         dto.setUsername(entity.getUsername());
         dto.setRole(entity.getRole());
         dto.setCreatedAt(entity.getCreatedAt());

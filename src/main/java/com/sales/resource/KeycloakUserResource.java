@@ -1,7 +1,9 @@
 package com.sales.resource;
 
 import com.sales.dto.KeycloakUserDTO;
+import com.sales.dto.UserDTO;
 import com.sales.service.KeycloakAdminClient;
+import com.sales.service.UserSyncService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -25,6 +27,9 @@ public class KeycloakUserResource {
 
     @Inject
     KeycloakAdminClient keycloakAdminClient;
+
+    @Inject
+    UserSyncService userSyncService;
 
     @GET
     @Operation(summary = "List all Keycloak users", description = "Returns all users from Keycloak sales-realm")
@@ -73,8 +78,8 @@ public class KeycloakUserResource {
     }
 
     @POST
-    @Operation(summary = "Create Keycloak user", description = "Creates a new user in Keycloak with password and roles")
-    @APIResponse(responseCode = "201", description = "User created",
+    @Operation(summary = "Create Keycloak user", description = "Creates a new user in Keycloak with password and roles, and syncs to local database")
+    @APIResponse(responseCode = "201", description = "User created and synced to local database",
             content = @Content(schema = @Schema(implementation = KeycloakUserDTO.class)))
     @APIResponse(responseCode = "400", description = "Invalid input")
     @APIResponse(responseCode = "409", description = "Username already exists")
@@ -92,7 +97,9 @@ public class KeycloakUserResource {
                 dto.getRoles()
         );
 
-        return Response.status(Response.Status.CREATED).entity(created).build();
+        UserDTO syncedUser = userSyncService.syncUserFromKeycloak(created);
+
+        return Response.status(Response.Status.CREATED).entity(syncedUser).build();
     }
 
     @PUT
@@ -164,13 +171,14 @@ public class KeycloakUserResource {
 
     @DELETE
     @Path("/{id}")
-    @Operation(summary = "Delete Keycloak user", description = "Permanently deletes a user from Keycloak")
-    @APIResponse(responseCode = "204", description = "User deleted")
+    @Operation(summary = "Delete Keycloak user", description = "Permanently deletes a user from Keycloak and local database")
+    @APIResponse(responseCode = "204", description = "User deleted from both Keycloak and local database")
     @APIResponse(responseCode = "404", description = "User not found")
     public Response deleteUser(
             @Parameter(description = "Keycloak user ID", required = true)
             @PathParam("id") String id) {
         keycloakAdminClient.deleteUser(id);
+        userSyncService.deleteUserByKeycloakId(id);
         return Response.noContent().build();
     }
 }

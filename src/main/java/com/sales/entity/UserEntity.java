@@ -19,6 +19,9 @@ public class UserEntity {
     @Column(columnDefinition = "UUID")
     private UUID id;
 
+    @Column(name = "keycloak_id", unique = true, length = 255)
+    private String keycloakId;
+
     @Column(nullable = false, unique = true, length = 100)
     private String username;
 
