@@ -2,16 +2,13 @@ package com.sales.service;
 
 import com.sales.dto.UserDTO;
 import com.sales.entity.UserEntity;
-import com.sales.exception.ConflictException;
 import com.sales.exception.ResourceNotFoundException;
 import com.sales.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class UserService {
@@ -19,36 +16,10 @@ public class UserService {
     @Inject
     UserRepository userRepository;
 
-    public List<UserDTO> findAll() {
-        return userRepository.listAll()
-                .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    public UserDTO findById(UUID id) {
-        return userRepository.findById(id)
-                .map(this::toDTO)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-    }
-
     public UserDTO findByUsername(String username) {
         return userRepository.findByUsername(username)
                 .map(this::toDTO)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
-    }
-
-    @Transactional
-    public UserDTO create(UserDTO userDTO) {
-        if (userRepository.findByUsername(userDTO.getUsername()).isPresent()) {
-            throw new ConflictException("Username already exists");
-        }
-        UserEntity entity = new UserEntity();
-        entity.setUsername(userDTO.getUsername());
-        entity.setRole(userDTO.getRole());
-        entity.setKeycloakId(userDTO.getKeycloakId());
-        userRepository.persist(entity);
-        return toDTO(entity);
     }
 
     @Transactional
@@ -78,15 +49,6 @@ public class UserService {
         return userRepository.findByKeycloakId(keycloakId)
                 .map(this::toDTO)
                 .orElse(null);
-    }
-
-    @Transactional
-    public UserDTO update(UUID id, UserDTO userDTO) {
-        UserEntity entity = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        entity.setUsername(userDTO.getUsername());
-        entity.setRole(userDTO.getRole());
-        return toDTO(entity);
     }
 
     @Transactional

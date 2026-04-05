@@ -532,7 +532,7 @@ All endpoints are fully documented with:
 
 | Resource | Path |
 |----------|------|
-| Auth | `/auth/userinfo`, `/auth/roles`, `/auth/check` |
+| Auth | `/auth/login`, `/auth/refresh`, `/auth/revoke`, `/auth/userinfo`, `/auth/roles`, `/auth/check` |
 | Users | `/api/users` (Keycloak CRUD) |
 | Products | `/api/products` |
 | Transactions | `/api/transactions` |
@@ -566,11 +566,12 @@ sales-system/
 │   │   ├── KeycloakAdminClient.java  # Keycloak Admin API client
 │   │   └── UserSyncService.java      # Keycloak ↔ Local DB sync
 │   ├── resource/
-│   │   ├── AuthResource.java         # Auth endpoints (userinfo, roles, check)
+│   │   ├── AuthResource.java         # Auth + token management (login, refresh, revoke, userinfo, roles, check)
 │   │   ├── UserResource.java         # Keycloak user management + local sync
 │   │   ├── ProductResource.java      # @Authenticated
-│   │   ├── TransactionResource.java  # @Authenticated
-│   │   └── TokenResource.java        # Token management (login, refresh, revoke)
+│   │   └── TransactionResource.java  # @Authenticated
+│   ├── util/
+│   │   └── SecurityContextHelper.java # Shared JWT user ID extraction
 │   ├── exception/
 │   │   ├── BadRequestException.java      # 400 errors
 │   │   ├── ConflictException.java        # 409 errors
@@ -590,19 +591,10 @@ sales-system/
 ├── src/main/resources/
 │   └── application.properties        # OIDC config + DB config
 └── src/test/java/com/sales/
-    ├── UuidV7GenerationTest.java              # UUIDv7 unit tests
-    ├── EntityIdGenerationTest.java            # Entity ID integration tests
-    ├── CrudResourceTest.java                  # Full CRUD API tests
-    ├── TokenResourceTest.java                 # Token login, refresh, revoke tests
-    ├── NurvanLoginTest.java                   # User-specific login and token tests
-    ├── KeycloakAdminClientTest.java           # KeycloakAdminClient service tests
-    ├── KeycloakUserResourceTest.java          # User management API tests
-    ├── KeycloakUserSyncApiTest.java           # User sync API tests
-    ├── UserSyncServiceTest.java               # Keycloak ↔ Local DB sync tests
-    ├── GetProductsTest.java                   # Product retrieval tests
-    ├── InsertProductsTest.java                # Product insertion tests
-    ├── InsertAndVerify100ProductsTest.java    # 100 products with user tracking
-    └── CreateUserEndpointTest.java            # User creation endpoint tests
+    ├── AuthResourceTest.java                # Auth + token API tests (13 tests)
+    ├── ProductResourceTest.java             # Product CRUD API tests (11 tests)
+    ├── TransactionResourceTest.java         # Transaction CRUD API tests (11 tests)
+    └── UserResourceTest.java                # Keycloak user management API tests (11 tests)
 ```
 
 ## Testing
@@ -614,53 +606,51 @@ sales-system/
 
 ### Run Specific Test Class
 ```bash
-# UUIDv7 unit tests (no database required)
-./mvnw test -Dtest=UuidV7GenerationTest
+# Auth + token tests
+./mvnw test -Dtest=AuthResourceTest
 
-# Entity ID integration tests (requires database)
-./mvnw test -Dtest=EntityIdGenerationTest
+# Product CRUD tests
+./mvnw test -Dtest=ProductResourceTest
 
-# Full CRUD API tests (requires database)
-./mvnw test -Dtest=CrudResourceTest
+# Transaction CRUD tests
+./mvnw test -Dtest=TransactionResourceTest
 
-# User API tests (requires database)
+# User management tests
 ./mvnw test -Dtest=UserResourceTest
 ```
 
 ### Test Coverage
 | Test Class | Tests | Description |
 |---|---|---|
-| `UuidV7GenerationTest` | 6 | UUIDv7 generation, uniqueness, ordering, format validation |
-| `EntityIdGenerationTest` | 4 | Entity ID generation for all 4 entity types |
-| `CrudResourceTest` | 29 | Full CRUD operations for Users, Products, and Transactions |
-| `UserResourceTest` | 3 | Basic user API integration tests |
-| `TokenResourceTest` | 7 | Token login, refresh, revoke endpoint tests |
-| `NurvanLoginTest` | 4 | User-specific login and token tests |
-| `KeycloakAdminClientTest` | 12 | KeycloakAdminClient service layer tests |
-| `KeycloakUserResourceTest` | 13 | Keycloak user management API endpoint tests |
-| `KeycloakUserSyncApiTest` | 7 | Keycloak user sync API tests |
-| `UserSyncServiceTest` | 6 | Keycloak ↔ Local DB user synchronization tests |
-| `GetProductsTest` | 3 | Product retrieval with dummy data insertion |
-| `InsertProductsTest` | 2 | Product creation with user tracking verification |
-| `InsertAndVerify100ProductsTest` | 3 | Product creation with user tracking verification |
-| `CreateUserEndpointTest` | 4 | Keycloak user creation endpoint tests |
-| **Total** | **99** | |
+| `AuthResourceTest` | 13 | Auth + token login, refresh, revoke, userinfo, roles, check |
+| `ProductResourceTest` | 11 | Product CRUD with validation and user tracking |
+| `TransactionResourceTest` | 11 | Transaction CRUD with stock validation and user extraction from token |
+| `UserResourceTest` | 11 | Keycloak user management API with graceful error handling |
+| **Total** | **46** | |
 
 ### Test Structure
 
-**Service Layer Tests (`KeycloakAdminClientTest`)**
-- Tests all methods in the Keycloak Admin API client
-- Handles both scenarios: Keycloak available and unavailable
-- Validates error handling (404, 400, 500 status codes)
-- Includes user creation with cleanup and role assignment
-- Tests role management (get, assign, list available)
+**Auth Tests (`AuthResourceTest`)**
+- Token operations: login, refresh, revoke with validation
+- User info operations: userinfo, roles, check with authenticated/anonymous scenarios
+- Uses `@TestSecurity` for isolated test execution
 
-**Resource Layer Tests (`KeycloakUserResourceTest`)**
-- Tests all REST endpoints for Keycloak user management
-- Validates request payloads (password required, roles required)
-- Tests error scenarios (missing fields, non-existent users)
-- Uses flexible status code matchers for different environments
-- Includes security context with `@TestSecurity`
+**Product Tests (`ProductResourceTest`)**
+- Full CRUD: create, read, update, delete
+- Validation: missing name, negative price, negative stock
+- Verifies auto-set `createdBy`/`updatedBy` from security context
+
+**Transaction Tests (`TransactionResourceTest`)**
+- Create with auto-calculated total amount
+- Stock validation (insufficient stock returns 400)
+- User ID extracted from JWT token via `SecurityContextHelper`
+- Delete cascades to transaction items
+
+**User Tests (`UserResourceTest`)**
+- Keycloak user management endpoints
+- Validation: missing password, missing username, missing roles
+- Error handling for non-existent users (404/500)
+- Graceful handling when Keycloak is unavailable
 
 ## Credential Management
 
@@ -771,12 +761,12 @@ Note: `createdBy` and `updatedBy` are read-only. They are automatically set from
 
 ## Notes
 - **Authentication via Keycloak SSO** - All API endpoints protected by OAuth2/OIDC
-  - Users managed in Keycloak Admin Console (http://localhost:8180) or via `/api/keycloak/users` API
+  - Users managed in Keycloak Admin Console (http://localhost:8180) or via `/api/users` API
   - JWT tokens with embedded roles for authorization
-  - `@Authenticated` annotation on all REST resources
-  - `AuthResource` provides `/auth/userinfo`, `/auth/roles`, `/auth/check` endpoints
-  - `TokenResource` provides `/auth/login`, `/auth/refresh`, `/auth/revoke` endpoints
+  - `@Authenticated` annotation on Product and Transaction resources
+  - `AuthResource` provides token management (`/auth/login`, `/auth/refresh`, `/auth/revoke`) and user info (`/auth/userinfo`, `/auth/roles`, `/auth/check`) endpoints
   - OIDC application type: `hybrid` (supports both browser flow and Bearer token authentication)
+  - User ID extracted from JWT token via shared `SecurityContextHelper` utility
 - **No password field in UserEntity/UserDTO** - Passwords managed entirely by Keycloak
 - **All primary keys use UUID v7** - Time-ordered, sortable identifiers via `xyz.block:uuidv7`
 - **All entities have `created_at` and `updated_at` timestamps**
@@ -951,11 +941,11 @@ Fields that are auto-generated by the system are marked with `@JsonProperty(acce
 ### TransactionDTO
 
 **Request body (send):**
-- `userId` (required)
 - `items` (required, list of `productId` + `quantity`)
 
 **System-managed (do not send):**
 - `id` — auto-generated UUID
+- `userId` — extracted from JWT token via `SecurityContextHelper`
 - `totalAmount` — auto-calculated from items
 - `createdAt` / `updatedAt` — auto-set
 

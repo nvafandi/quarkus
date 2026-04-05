@@ -2,7 +2,9 @@ package com.sales.resource;
 
 import com.sales.dto.TransactionDTO;
 import com.sales.service.TransactionService;
+import com.sales.util.SecurityContextHelper;
 import io.quarkus.security.Authenticated;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -16,7 +18,6 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-import java.util.List;
 import java.util.UUID;
 
 @Path("/api/transactions")
@@ -28,6 +29,12 @@ public class TransactionResource {
 
     @Inject
     TransactionService transactionService;
+
+    @Inject
+    SecurityIdentity securityIdentity;
+
+    @Inject
+    SecurityContextHelper securityContextHelper;
 
     @GET
     @Operation(summary = "Get all transactions", description = "Retrieve a list of all transactions")
@@ -65,7 +72,8 @@ public class TransactionResource {
             @RequestBody(description = "Transaction data with items", required = true,
                     content = @Content(schema = @Schema(implementation = TransactionDTO.class)))
             @Valid TransactionDTO transactionDTO) {
-        TransactionDTO created = transactionService.create(transactionDTO);
+        UUID userId = securityContextHelper.extractUserId(securityIdentity);
+        TransactionDTO created = transactionService.create(transactionDTO, userId);
         return Response.status(Response.Status.CREATED).entity(created).build();
     }
 

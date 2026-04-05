@@ -8,14 +8,8 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Token request and response DTO")
+@Schema(description = "Token response DTO")
 public class TokenDTO {
-
-    @Schema(description = "Username for login", example = "admin")
-    private String username;
-
-    @Schema(description = "Password for login", example = "admin123")
-    private String password;
 
     @Schema(description = "Access token (JWT)")
     private String accessToken;

@@ -2,7 +2,6 @@ package com.sales.service;
 
 import com.sales.dto.ProductDTO;
 import com.sales.entity.ProductEntity;
-import com.sales.exception.BadRequestException;
 import com.sales.exception.ResourceNotFoundException;
 import com.sales.repository.ProductRepository;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -60,16 +59,6 @@ public class ProductService {
         productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
         productRepository.deleteById(id);
-    }
-
-    @Transactional
-    public void decreaseStock(UUID productId, int quantity) {
-        ProductEntity entity = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
-        if (entity.getStock() < quantity) {
-            throw new BadRequestException("Insufficient stock for product: " + productId);
-        }
-        entity.setStock(entity.getStock() - quantity);
     }
 
     private ProductDTO toDTO(ProductEntity entity) {

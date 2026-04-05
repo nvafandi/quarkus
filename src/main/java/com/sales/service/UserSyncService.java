@@ -56,35 +56,6 @@ public class UserSyncService {
         }
     }
 
-    @Transactional
-    public void syncAllUsersFromKeycloak() {
-        LOG.info("Starting full sync of Keycloak users to local database");
-
-        List<Map<String, Object>> keycloakUsers = keycloakAdminClient.getAllUsers();
-
-        int synced = 0;
-        int errors = 0;
-
-        for (Map<String, Object> keycloakUser : keycloakUsers) {
-            try {
-                syncUserFromKeycloak(keycloakUser);
-                synced++;
-            } catch (Exception e) {
-                errors++;
-                LOG.errorf("Failed to sync user %s: %s",
-                        keycloakUser.get("username"), e.getMessage());
-            }
-        }
-
-        LOG.infof("Sync completed: %d synced, %d errors", synced, errors);
-    }
-
-    @Transactional
-    public UserDTO syncUserByUsername(String username) {
-        Map<String, Object> keycloakUser = keycloakAdminClient.getUserByUsername(username);
-        return syncUserFromKeycloak(keycloakUser);
-    }
-
     private String extractRoleFromKeycloak(String keycloakId) {
         try {
             List<String> roles = keycloakAdminClient.getUserRoles(keycloakId);

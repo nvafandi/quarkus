@@ -53,9 +53,9 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionDTO create(TransactionDTO transactionDTO) {
-        UserEntity user = userRepository.findById(transactionDTO.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + transactionDTO.getUserId()));
+    public TransactionDTO create(TransactionDTO transactionDTO, UUID userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         TransactionEntity transaction = new TransactionEntity();
         transaction.setUser(user);
@@ -90,9 +90,9 @@ public class TransactionService {
 
     @Transactional
     public void delete(UUID id) {
-        transactionRepository.findById(id)
+        TransactionEntity entity = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with id: " + id));
-        transactionRepository.deleteById(id);
+        transactionRepository.delete(entity);
     }
 
     private TransactionDTO toDTO(TransactionEntity entity) {

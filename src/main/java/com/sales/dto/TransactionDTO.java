@@ -22,8 +22,8 @@ public class TransactionDTO {
     @Schema(description = "Transaction unique identifier (UUID v7)")
     private UUID id;
 
-    @NotNull(message = "User ID is required")
-    @Schema(description = "User who created this transaction", example = "019d54c7-d83c-7c28-8000-0682ed879d04")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "User who created this transaction (extracted from auth token)")
     private UUID userId;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

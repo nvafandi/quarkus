@@ -38,6 +38,7 @@ quarkus.oidc.logout.post-logout-path=/
 
 # OpenAPI / Swagger UI Configuration
 quarkus.smallrye-openapi.store-schema-directory=target/openapi
+quarkus.smallrye-openapi.scan-packages=com.sales
 quarkus.swagger-ui.always-include=true
 quarkus.swagger-ui.path=/swagger-ui
 

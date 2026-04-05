@@ -1,9 +1,8 @@
 package com.sales.resource;
 
 import com.sales.dto.ProductDTO;
-import com.sales.dto.UserDTO;
 import com.sales.service.ProductService;
-import com.sales.service.UserService;
+import com.sales.util.SecurityContextHelper;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
@@ -11,7 +10,6 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
@@ -20,7 +18,6 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-import java.util.List;
 import java.util.UUID;
 
 @Path("/api/products")
@@ -34,13 +31,10 @@ public class ProductResource {
     ProductService productService;
 
     @Inject
-    UserService userService;
-
-    @Inject
     SecurityIdentity securityIdentity;
 
     @Inject
-    jakarta.enterprise.inject.Instance<JsonWebToken> jwtInstance;
+    SecurityContextHelper securityContextHelper;
 
     @GET
     @Operation(summary = "Get all products", description = "Retrieve a list of all products")
@@ -67,7 +61,7 @@ public class ProductResource {
             @RequestBody(description = "Product data", required = true,
                     content = @Content(schema = @Schema(implementation = ProductDTO.class)))
             @Valid ProductDTO productDTO) {
-        UUID userId = getCurrentUserId();
+        UUID userId = securityContextHelper.extractUserId(securityIdentity);
         ProductDTO created = productService.create(productDTO, userId);
         return Response.status(Response.Status.CREATED).entity(created).build();
     }
@@ -80,45 +74,8 @@ public class ProductResource {
     public Response update(
             @Parameter(description = "Product UUID") @PathParam("id") UUID id,
             @Valid ProductDTO productDTO) {
-        UUID userId = getCurrentUserId();
+        UUID userId = securityContextHelper.extractUserId(securityIdentity);
         return Response.ok(productService.update(id, productDTO, userId)).build();
-    }
-
-    private UUID getCurrentUserId() {
-        if (securityIdentity != null && !securityIdentity.isAnonymous()) {
-            return syncUserIdFromSecurity();
-        }
-        return null;
-    }
-
-    private UUID syncUserIdFromSecurity() {
-        try {
-            String keycloakId = null;
-            String username = null;
-
-            // Get Keycloak UUID from JWT token if OIDC is enabled
-            if (jwtInstance.isResolvable()) {
-                JsonWebToken jwt = jwtInstance.get();
-                keycloakId = jwt.getSubject();
-                username = jwt.getName();
-            }
-
-            if (keycloakId == null || keycloakId.isBlank()) {
-                return null;
-            }
-
-            UserDTO user = userService.findByKeycloakId(keycloakId);
-
-            if (user != null) {
-                return user.getId();
-            }
-
-            // Auto-create local user record if not exists
-            user = userService.createOrUpdateFromKeycloak(keycloakId, username, "USER");
-            return user.getId();
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     @DELETE
