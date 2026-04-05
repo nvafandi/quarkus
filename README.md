@@ -114,33 +114,49 @@ The Keycloak realm (`sales-realm`) is pre-configured with these users:
 **Via Quarkus API:**
 
 ```bash
-curl -s -X POST http://localhost:5000/api/keycloak/users \
+curl -s -X POST http://localhost:5000/api/users \
   -H "Content-Type: application/json" \
   -d '{
     "username": "newuser",
     "password": "securepass",
     "email": "user@example.com",
-    "emailVerified": true,
     "roles": ["CASHIER"]
   }'
 ```
 
-### Keycloak User Management API
+**Request body fields:**
 
-A full CRUD API for managing Keycloak users is available at `/api/keycloak/users`.
+| Field | Required | Description |
+|---|---|---|
+| `username` | Yes | Unique login name |
+| `password` | Yes | User password |
+| `email` | No | User email |
+| `roles` | No | Client roles (e.g. `["ADMIN"]`, `["CASHIER"]`) |
+
+**System-managed fields** (auto-set, not accepted in request body):
+- `id` — Keycloak-generated UUID
+- `emailVerified` — defaults to `true`
+- `enabled` — defaults to `true`
+- `createdTimestamp` — set by system on creation
+
+### User Management API
+
+All user operations (Keycloak + local DB) are available at `/api/users`.
+
+**Keycloak User Endpoints:**
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/keycloak/users` | List all Keycloak users |
-| `GET` | `/api/keycloak/users/{id}` | Get user by ID (includes roles) |
-| `GET` | `/api/keycloak/users/username/{username}` | Get user by username |
-| `POST` | `/api/keycloak/users` | Create user with password and roles |
-| `PUT` | `/api/keycloak/users/{id}` | Update user details |
-| `PUT` | `/api/keycloak/users/{id}/password` | Reset user password |
-| `PUT` | `/api/keycloak/users/{id}/roles` | Assign roles to user |
-| `GET` | `/api/keycloak/users/{id}/roles` | Get user roles |
-| `GET` | `/api/keycloak/users/roles` | List available roles |
-| `DELETE` | `/api/keycloak/users/{id}` | Delete user |
+| `GET` | `/api/users` | List all Keycloak users |
+| `GET` | `/api/users/{id}` | Get user by Keycloak ID (includes roles) |
+| `GET` | `/api/users/username/{username}` | Get user by username |
+| `GET` | `/api/users/roles` | List available roles |
+| `POST` | `/api/users` | Create user with password and roles |
+| `PUT` | `/api/users/{id}` | Update Keycloak user details |
+| `PUT` | `/api/users/{id}/password` | Reset user password |
+| `PUT` | `/api/users/{id}/roles` | Assign roles to user |
+| `GET` | `/api/users/{id}/roles` | Get user roles |
+| `DELETE` | `/api/users/{id}` | Delete user from Keycloak and local DB |
 
 ### Customizing the Realm
 
@@ -517,10 +533,9 @@ All endpoints are fully documented with:
 | Resource | Path |
 |----------|------|
 | Auth | `/auth/userinfo`, `/auth/roles`, `/auth/check` |
-| Users | `/api/users` |
+| Users | `/api/users` (Keycloak CRUD) |
 | Products | `/api/products` |
 | Transactions | `/api/transactions` |
-| Keycloak Users | `/api/keycloak/users` |
 
 For detailed API documentation, use Swagger UI instead of static tables and examples.
 
@@ -533,8 +548,8 @@ sales-system/
 │   └── realm/
 │       └── sales-realm.json          # Keycloak realm export (users, roles, client)
 ├── src/main/java/com/sales/
-│   ├── config/
-│   │   └── OpenAPIConfig.java        # OpenAPI/Swagger configuration
+│   ├── auth/
+│   │   └── UserSyncFilter.java       # Auto-sync Keycloak user on first login
 │   ├── entity/
 │   │   ├── UserEntity.java           # No password field (managed by Keycloak)
 │   │   ├── ProductEntity.java
@@ -548,15 +563,21 @@ sales-system/
 │   │   ├── UserService.java
 │   │   ├── ProductService.java
 │   │   ├── TransactionService.java
-│   │   └── KeycloakAdminClient.java  # Keycloak Admin API client
+│   │   ├── KeycloakAdminClient.java  # Keycloak Admin API client
+│   │   └── UserSyncService.java      # Keycloak ↔ Local DB sync
 │   ├── resource/
 │   │   ├── AuthResource.java         # Auth endpoints (userinfo, roles, check)
-│   │   ├── UserResource.java         # @Authenticated
+│   │   ├── UserResource.java         # Keycloak user management + local sync
 │   │   ├── ProductResource.java      # @Authenticated
 │   │   ├── TransactionResource.java  # @Authenticated
-│   │   ├── KeycloakUserResource.java # Keycloak user management API
-│   │   ├── TokenResource.java        # Token management (login, refresh, revoke)
-│   │   └── GlobalExceptionMapper.java
+│   │   └── TokenResource.java        # Token management (login, refresh, revoke)
+│   ├── exception/
+│   │   ├── BadRequestException.java      # 400 errors
+│   │   ├── ConflictException.java        # 409 errors
+│   │   ├── ResourceNotFoundException.java # 404 errors
+│   │   ├── ServerErrorException.java     # 500 errors
+│   │   ├── UnAuthorizedException.java    # 401 errors
+│   │   └── GlobalExceptionMapper.java    # Centralized exception handling
 │   └── dto/
 │       ├── UserDTO.java              # No password field
 │       ├── ProductDTO.java
@@ -565,24 +586,23 @@ sales-system/
 │       ├── TokenDTO.java             # Token response DTO
 │       ├── LoginRequestDTO.java      # Login request DTO (username + password)
 │       ├── KeycloakUserDTO.java      # Keycloak user create/update DTO
-│       └── ErrorResponse.java
+│       └── ApiResponse.java          # Unified response wrapper
 ├── src/main/resources/
 │   └── application.properties        # OIDC config + DB config
 └── src/test/java/com/sales/
     ├── UuidV7GenerationTest.java              # UUIDv7 unit tests
     ├── EntityIdGenerationTest.java            # Entity ID integration tests
     ├── CrudResourceTest.java                  # Full CRUD API tests
-    ├── UserResourceTest.java                  # User API tests
     ├── TokenResourceTest.java                 # Token login, refresh, revoke tests
     ├── NurvanLoginTest.java                   # User-specific login and token tests
     ├── KeycloakAdminClientTest.java           # KeycloakAdminClient service tests
-    ├── KeycloakUserResourceTest.java          # Keycloak user management API tests
-    ├── KeycloakUserSyncApiTest.java           # Keycloak user sync API tests
-    ├── UserSyncServiceTest.java               # User sync (Keycloak ↔ Local DB) tests
+    ├── KeycloakUserResourceTest.java          # User management API tests
+    ├── KeycloakUserSyncApiTest.java           # User sync API tests
+    ├── UserSyncServiceTest.java               # Keycloak ↔ Local DB sync tests
     ├── GetProductsTest.java                   # Product retrieval tests
     ├── InsertProductsTest.java                # Product insertion tests
-    ├── InsertAndVerify100ProductsTest.java    # Product creation with user tracking tests
-    └── CreateUserEndpointTest.java            # Keycloak user creation endpoint tests
+    ├── InsertAndVerify100ProductsTest.java    # 100 products with user tracking
+    └── CreateUserEndpointTest.java            # User creation endpoint tests
 ```
 
 ## Testing
@@ -859,3 +879,91 @@ Error responses can be validated by status code:
 .statusCode(409)
 .statusCode(500)
 ```
+
+## Global Exception Handling
+
+All exceptions are handled centrally by `GlobalExceptionMapper`, which converts them to unified `ApiResponse` error responses.
+
+### Custom Exception Classes
+
+| Exception | HTTP Status | Usage |
+|---|---|---|
+| `BadRequestException` | 400 | Validation errors, missing required fields, bad input |
+| `UnAuthorizedException` | 401 | Authentication failures (invalid credentials, expired tokens) |
+| `ResourceNotFoundException` | 404 | Requested resource does not exist |
+| `ConflictException` | 409 | Duplicate resource (e.g. username already exists) |
+| `ServerErrorException` | 500 | Internal server errors, external service failures |
+
+### Error Response Format
+
+```json
+{
+  "success": false,
+  "status": 400,
+  "data": null,
+  "message": "Password is required"
+}
+```
+
+## DTO Field Conventions
+
+Fields that are auto-generated by the system are marked with `@JsonProperty(access = READ_ONLY)` and should not be sent in request bodies.
+
+### KeycloakUserDTO (POST /api/users)
+
+**Request body (send):**
+- `username` (required)
+- `password` (required)
+- `email` (optional)
+- `roles` (optional)
+
+**System-managed (do not send):**
+- `id` — generated by Keycloak
+- `emailVerified` — defaults to `true`
+- `enabled` — defaults to `true`
+- `createdTimestamp` — set by Keycloak on creation
+
+### UserDTO (Local DB)
+
+**Request body (send):**
+- `username` (required)
+- `role` (optional)
+
+**System-managed (do not send):**
+- `id` — auto-generated UUID
+- `keycloakId` — set during Keycloak sync
+- `createdAt` — auto-set on creation
+- `updatedAt` — auto-set on every update
+
+### ProductDTO
+
+**Request body (send):**
+- `name` (required)
+- `price` (required)
+- `stock` (required)
+
+**System-managed (do not send):**
+- `id` — auto-generated UUID
+- `createdBy` — extracted from JWT token
+- `updatedBy` — extracted from JWT token
+- `createdAt` / `updatedAt` — auto-set
+
+### TransactionDTO
+
+**Request body (send):**
+- `userId` (required)
+- `items` (required, list of `productId` + `quantity`)
+
+**System-managed (do not send):**
+- `id` — auto-generated UUID
+- `totalAmount` — auto-calculated from items
+- `createdAt` / `updatedAt` — auto-set
+
+### TransactionItemDTO
+
+**Request body (send):**
+- `productId` (required)
+- `quantity` (required)
+
+**System-managed (do not send):**
+- `price` — auto-set from product price at time of purchase

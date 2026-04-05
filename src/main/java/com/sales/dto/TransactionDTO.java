@@ -1,5 +1,6 @@
 package com.sales.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @Schema(description = "Transaction data transfer object")
 public class TransactionDTO {
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Schema(description = "Transaction unique identifier (UUID v7)")
     private UUID id;
 
@@ -24,12 +26,15 @@ public class TransactionDTO {
     @Schema(description = "User who created this transaction", example = "019d54c7-d83c-7c28-8000-0682ed879d04")
     private UUID userId;
 
-    @Schema(description = "Total transaction amount")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "Total transaction amount (auto-calculated)")
     private BigDecimal totalAmount;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Schema(description = "Record creation timestamp")
     private LocalDateTime createdAt;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Schema(description = "Record last update timestamp")
     private LocalDateTime updatedAt;
 

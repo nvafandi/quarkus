@@ -4,6 +4,7 @@ import com.sales.dto.ApiResponse;
 import com.sales.dto.LoginRequestDTO;
 import com.sales.dto.TokenDTO;
 import com.sales.dto.UserDTO;
+import com.sales.exception.BadRequestException;
 import com.sales.service.KeycloakAdminClient;
 import com.sales.service.UserSyncService;
 import jakarta.inject.Inject;
@@ -14,7 +15,6 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
-import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -29,9 +29,6 @@ public class TokenResource {
 
     @Inject
     KeycloakAdminClient keycloakAdminClient;
-
-    @Inject
-    UserSyncService userSyncService;
 
     @POST
     @Path("/login")
@@ -51,14 +48,6 @@ public class TokenResource {
                 loginRequest.getUsername(),
                 loginRequest.getPassword()
         );
-
-        // Sync user to local database after successful login
-        try {
-            userSyncService.syncUserByUsername(loginRequest.getUsername());
-        } catch (Exception e) {
-            // Log warning but don't fail the login - user will be synced on first API access
-            System.err.println("[WARN] Failed to sync user during login: " + e.getMessage());
-        }
 
         TokenDTO response = new TokenDTO();
         response.setAccessToken(tokenResponse.get("accessToken"));
@@ -86,7 +75,7 @@ public class TokenResource {
             @Valid TokenDTO refreshRequest) {
 
         if (refreshRequest.getRefreshToken() == null || refreshRequest.getRefreshToken().isBlank()) {
-            throw new WebApplicationException("Refresh token is required", Response.Status.BAD_REQUEST);
+            throw new BadRequestException("Refresh token is required");
         }
 
         Map<String, String> tokenResponse = keycloakAdminClient.refreshToken(
@@ -118,7 +107,7 @@ public class TokenResource {
             @Valid TokenDTO revokeRequest) {
 
         if (revokeRequest.getRefreshToken() == null || revokeRequest.getRefreshToken().isBlank()) {
-            throw new WebApplicationException("Refresh token is required", Response.Status.BAD_REQUEST);
+            throw new BadRequestException("Refresh token is required");
         }
 
         keycloakAdminClient.revokeToken(revokeRequest.getRefreshToken());

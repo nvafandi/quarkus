@@ -20,7 +20,7 @@ public class KeycloakUserResourceTest {
         // This will either succeed or return error depending on Keycloak availability
         given()
             .when()
-            .get("/api/keycloak/users")
+            .get("/api/users")
         .then()
             .statusCode(anyOf(
                 is(200),  // Keycloak available
@@ -35,7 +35,7 @@ public class KeycloakUserResourceTest {
         given()
             .pathParam("id", "non-existent-user-id")
         .when()
-            .get("/api/keycloak/users/{id}")
+            .get("/api/users/{id}")
         .then()
             .statusCode(anyOf(
                 is(404),  // User not found
@@ -50,7 +50,7 @@ public class KeycloakUserResourceTest {
         given()
             .pathParam("username", "nonexistent_user_" + System.currentTimeMillis())
         .when()
-            .get("/api/keycloak/users/username/{username}")
+            .get("/api/users/username/{username}")
         .then()
             .statusCode(anyOf(
                 is(404),  // User not found
@@ -73,7 +73,7 @@ public class KeycloakUserResourceTest {
             .contentType(ContentType.JSON)
             .body(json)
         .when()
-            .post("/api/keycloak/users")
+            .post("/api/users")
         .then()
             .statusCode(400);
     }
@@ -88,7 +88,6 @@ public class KeycloakUserResourceTest {
                 "username": "%s",
                 "password": "TestPass123!",
                 "email": "%s@example.com",
-                "emailVerified": true,
                 "roles": ["USER"]
             }
             """.formatted(uniqueUsername, uniqueUsername);
@@ -97,7 +96,7 @@ public class KeycloakUserResourceTest {
             .contentType(ContentType.JSON)
             .body(json)
         .when()
-            .post("/api/keycloak/users")
+            .post("/api/users")
         .then()
             .statusCode(anyOf(
                 is(201),  // Success
@@ -114,9 +113,7 @@ public class KeycloakUserResourceTest {
         String json = """
             {
                 "username": "updateduser",
-                "email": "updated@example.com",
-                "emailVerified": true,
-                "enabled": true
+                "email": "updated@example.com"
             }
             """;
 
@@ -125,7 +122,7 @@ public class KeycloakUserResourceTest {
             .pathParam("id", "non-existent-user-id")
             .body(json)
         .when()
-            .put("/api/keycloak/users/{id}")
+            .put("/api/users/{id}")
         .then()
             .statusCode(anyOf(
                 is(404),  // User not found
@@ -148,7 +145,7 @@ public class KeycloakUserResourceTest {
             .pathParam("id", "test-user-id")
             .body(json)
         .when()
-            .put("/api/keycloak/users/{id}/password")
+            .put("/api/users/{id}/password")
         .then()
             .statusCode(400);
     }
@@ -168,7 +165,7 @@ public class KeycloakUserResourceTest {
             .pathParam("id", "non-existent-user-id")
             .body(json)
         .when()
-            .put("/api/keycloak/users/{id}/password")
+            .put("/api/users/{id}/password")
         .then()
             .statusCode(anyOf(
                 is(404),  // User not found
@@ -192,7 +189,7 @@ public class KeycloakUserResourceTest {
             .pathParam("id", "test-user-id")
             .body(json)
         .when()
-            .put("/api/keycloak/users/{id}/roles")
+            .put("/api/users/{id}/roles")
         .then()
             .statusCode(anyOf(
                 is(400),  // Missing roles
@@ -215,7 +212,7 @@ public class KeycloakUserResourceTest {
             .pathParam("id", "non-existent-user-id")
             .body(json)
         .when()
-            .put("/api/keycloak/users/{id}/roles")
+            .put("/api/users/{id}/roles")
         .then()
             .statusCode(anyOf(
                 is(400),  // Role not found or user not found
@@ -230,7 +227,7 @@ public class KeycloakUserResourceTest {
         given()
             .pathParam("id", "non-existent-user-id")
         .when()
-            .get("/api/keycloak/users/{id}/roles")
+            .get("/api/users/{id}/roles")
         .then()
             .statusCode(200)
             .body(is(notNullValue()));
@@ -243,7 +240,7 @@ public class KeycloakUserResourceTest {
         given()
             .pathParam("id", "non-existent-user-id")
         .when()
-            .delete("/api/keycloak/users/{id}")
+            .delete("/api/users/{id}")
         .then()
             .statusCode(anyOf(
                 is(404),  // User not found
@@ -257,7 +254,7 @@ public class KeycloakUserResourceTest {
     public void testListAvailableRoles() {
         given()
             .when()
-            .get("/api/keycloak/users/roles")
+            .get("/api/users/roles")
         .then()
             .statusCode(200)
             .body(is(notNullValue()));

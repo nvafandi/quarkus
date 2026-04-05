@@ -3,5 +3,6 @@
     "allow": [
       "Bash(./mvnw *)"
     ]
-  }
+  },
+  "$version": 3
 }

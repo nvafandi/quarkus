@@ -1,5 +1,6 @@
 package com.sales.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,6 +24,7 @@ public class TransactionItemDTO {
     @Schema(description = "Item quantity", example = "2")
     private Integer quantity;
 
-    @Schema(description = "Item price at time of purchase")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "Item price at time of purchase (auto-set from product)")
     private BigDecimal price;
 }

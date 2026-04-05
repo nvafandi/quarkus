@@ -16,22 +16,21 @@ public class CreateUserEndpointTest {
 
     @Test
     @Order(1)
-    @DisplayName("POST /api/keycloak/users - Create User")
+    @DisplayName("POST /api/users - Create User")
     public void testCreateUserEndpoint() {
         String uniqueUsername = "api_test_user_" + System.currentTimeMillis();
 
         System.out.println("\n==========================================");
-        System.out.println("Testing: POST /api/keycloak/users");
+        System.out.println("Testing: POST /api/users");
         System.out.println("==========================================");
         System.out.println("\nRequest:");
-        System.out.println("POST http://localhost:8081/api/keycloak/users");
+        System.out.println("POST http://localhost:8081/api/users");
         System.out.println("Content-Type: application/json");
         System.out.println("\nBody:");
         System.out.println("{");
         System.out.println("  \"username\": \"" + uniqueUsername + "\",");
         System.out.println("  \"password\": \"TestPass123!\",");
         System.out.println("  \"email\": \"" + uniqueUsername + "@example.com\",");
-        System.out.println("  \"emailVerified\": true,");
         System.out.println("  \"roles\": [\"USER\"]");
         System.out.println("}");
 
@@ -42,12 +41,11 @@ public class CreateUserEndpointTest {
                     "username": "%s",
                     "password": "TestPass123!",
                     "email": "%s@example.com",
-                    "emailVerified": true,
                     "roles": ["USER"]
                 }
                 """.formatted(uniqueUsername, uniqueUsername))
         .when()
-            .post("/api/keycloak/users")
+            .post("/api/users")
         .then()
             .statusCode(anyOf(
                 is(201),  // Keycloak available - user created and synced
@@ -83,13 +81,13 @@ public class CreateUserEndpointTest {
 
     @Test
     @Order(2)
-    @DisplayName("POST /api/keycloak/users - Missing Password (400)")
+    @DisplayName("POST /api/users - Missing Password (400)")
     public void testCreateUser_MissingPassword() {
         System.out.println("\n==========================================");
-        System.out.println("Testing: POST /api/keycloak/users - Missing Password");
+        System.out.println("Testing: POST /api/users - Missing Password");
         System.out.println("==========================================");
         System.out.println("\nRequest:");
-        System.out.println("POST http://localhost:8081/api/keycloak/users");
+        System.out.println("POST http://localhost:8081/api/users");
         System.out.println("Body: { \"username\": \"test_no_pass\" }");
 
         Response response = given()
@@ -100,7 +98,7 @@ public class CreateUserEndpointTest {
                 }
                 """)
         .when()
-            .post("/api/keycloak/users")
+            .post("/api/users")
         .then()
             .statusCode(400)
             .extract()
@@ -114,15 +112,15 @@ public class CreateUserEndpointTest {
 
     @Test
     @Order(3)
-    @DisplayName("GET /api/keycloak/users - List Users")
+    @DisplayName("GET /api/users - List Users")
     public void testListUsersEndpoint() {
         System.out.println("\n==========================================");
-        System.out.println("Testing: GET /api/keycloak/users");
+        System.out.println("Testing: GET /api/users");
         System.out.println("==========================================");
 
         Response response = given()
         .when()
-            .get("/api/keycloak/users")
+            .get("/api/users")
         .then()
             .statusCode(anyOf(is(200), is(500)))
             .extract()
@@ -139,19 +137,19 @@ public class CreateUserEndpointTest {
 
     @Test
     @Order(4)
-    @DisplayName("DELETE /api/keycloak/users/{id} - Delete User")
+    @DisplayName("DELETE /api/users/{id} - Delete User")
     public void testDeleteUserEndpoint() {
         String testId = "non-existent-user-" + System.currentTimeMillis();
 
         System.out.println("\n==========================================");
-        System.out.println("Testing: DELETE /api/keycloak/users/{id}");
+        System.out.println("Testing: DELETE /api/users/{id}");
         System.out.println("==========================================");
         System.out.println("\nRequest:");
-        System.out.println("DELETE http://localhost:8081/api/keycloak/users/" + testId);
+        System.out.println("DELETE http://localhost:8081/api/users/" + testId);
 
         Response response = given()
         .when()
-            .delete("/api/keycloak/users/" + testId)
+            .delete("/api/users/" + testId)
         .then()
             .statusCode(anyOf(is(204), is(404), is(500)))
             .extract()

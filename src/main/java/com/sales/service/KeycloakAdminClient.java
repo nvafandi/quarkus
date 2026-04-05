@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sales.exception.BadRequestException;
+import com.sales.exception.ConflictException;
+import com.sales.exception.ResourceNotFoundException;
+import com.sales.exception.ServerErrorException;
+import com.sales.exception.UnAuthorizedException;
 import io.quarkus.runtime.Startup;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.net.URI;
@@ -68,8 +71,7 @@ public class KeycloakAdminClient {
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                throw new WebApplicationException("Failed to get Keycloak admin token: " + response.body(),
-                        Response.Status.INTERNAL_SERVER_ERROR);
+                throw new ServerErrorException("Failed to get Keycloak admin token: " + response.body());
             }
 
             JsonNode json = MAPPER.readTree(response.body());
@@ -79,8 +81,7 @@ public class KeycloakAdminClient {
 
             return adminToken;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to authenticate with Keycloak: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to authenticate with Keycloak: " + e.getMessage());
         }
     }
 
@@ -100,13 +101,11 @@ public class KeycloakAdminClient {
             if (response.statusCode() == 200) {
                 return MAPPER.readValue(response.body(), List.class);
             }
-            throw new WebApplicationException("Failed to fetch users: " + response.body(),
-                    Response.Status.fromStatusCode(response.statusCode()));
-        } catch (WebApplicationException e) {
+            throw new ServerErrorException("Failed to fetch users: " + response.body());
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to fetch users: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to fetch users: " + e.getMessage());
         }
     }
 
@@ -117,18 +116,16 @@ public class KeycloakAdminClient {
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 404) {
-                throw new jakarta.ws.rs.NotFoundException("Keycloak user not found: " + userId);
+                throw new ResourceNotFoundException("Keycloak user not found: " + userId);
             }
             if (response.statusCode() == 200) {
                 return MAPPER.readValue(response.body(), Map.class);
             }
-            throw new WebApplicationException("Failed to fetch user: " + response.body(),
-                    Response.Status.fromStatusCode(response.statusCode()));
-        } catch (WebApplicationException e) {
+            throw new ServerErrorException("Failed to fetch user: " + response.body());
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to fetch user: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to fetch user: " + e.getMessage());
         }
     }
 
@@ -141,17 +138,15 @@ public class KeycloakAdminClient {
             if (response.statusCode() == 200) {
                 List<Map<String, Object>> users = MAPPER.readValue(response.body(), List.class);
                 if (users.isEmpty()) {
-                    throw new jakarta.ws.rs.NotFoundException("Keycloak user not found: " + username);
+                    throw new ResourceNotFoundException("Keycloak user not found: " + username);
                 }
                 return users.get(0);
             }
-            throw new WebApplicationException("Failed to fetch user: " + response.body(),
-                    Response.Status.fromStatusCode(response.statusCode()));
-        } catch (WebApplicationException e) {
+            throw new ServerErrorException("Failed to fetch user: " + response.body());
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to fetch user: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to fetch user: " + e.getMessage());
         }
     }
 
@@ -176,11 +171,9 @@ public class KeycloakAdminClient {
 
             if (response.statusCode() != 201) {
                 if (response.statusCode() == 409) {
-                    throw new WebApplicationException("Username already exists: " + username,
-                            Response.Status.CONFLICT);
+                    throw new ConflictException("Username already exists: " + username);
                 }
-                throw new WebApplicationException("Failed to create user: " + response.body(),
-                        Response.Status.BAD_REQUEST);
+                throw new BadRequestException("Failed to create user: " + response.body());
             }
 
             Map<String, Object> createdUser = getUserByUsername(username);
@@ -195,11 +188,10 @@ public class KeycloakAdminClient {
             }
 
             return createdUser;
-        } catch (WebApplicationException e) {
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to create user: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to create user: " + e.getMessage());
         }
     }
 
@@ -222,18 +214,16 @@ public class KeycloakAdminClient {
 
             if (response.statusCode() != 204) {
                 if (response.statusCode() == 404) {
-                    throw new jakarta.ws.rs.NotFoundException("Keycloak user not found: " + userId);
+                    throw new ResourceNotFoundException("Keycloak user not found: " + userId);
                 }
-                throw new WebApplicationException("Failed to update user: " + response.body(),
-                        Response.Status.BAD_REQUEST);
+                throw new BadRequestException("Failed to update user: " + response.body());
             }
 
             return getUserById(userId);
-        } catch (WebApplicationException e) {
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to update user: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to update user: " + e.getMessage());
         }
     }
 
@@ -254,16 +244,14 @@ public class KeycloakAdminClient {
 
             if (response.statusCode() != 204) {
                 if (response.statusCode() == 404) {
-                    throw new jakarta.ws.rs.NotFoundException("Keycloak user not found: " + userId);
+                    throw new ResourceNotFoundException("Keycloak user not found: " + userId);
                 }
-                throw new WebApplicationException("Failed to reset password: " + response.body(),
-                        Response.Status.BAD_REQUEST);
+                throw new BadRequestException("Failed to reset password: " + response.body());
             }
-        } catch (WebApplicationException e) {
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to reset password: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to reset password: " + e.getMessage());
         }
     }
 
@@ -279,16 +267,14 @@ public class KeycloakAdminClient {
 
             if (response.statusCode() != 204) {
                 if (response.statusCode() == 404) {
-                    throw new jakarta.ws.rs.NotFoundException("Keycloak user not found: " + userId);
+                    throw new ResourceNotFoundException("Keycloak user not found: " + userId);
                 }
-                throw new WebApplicationException("Failed to delete user: " + response.body(),
-                        Response.Status.BAD_REQUEST);
+                throw new BadRequestException("Failed to delete user: " + response.body());
             }
-        } catch (WebApplicationException e) {
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to delete user: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to delete user: " + e.getMessage());
         }
     }
 
@@ -365,14 +351,12 @@ public class KeycloakAdminClient {
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 204) {
-                throw new WebApplicationException("Failed to assign roles: " + response.body(),
-                        Response.Status.BAD_REQUEST);
+                throw new BadRequestException("Failed to assign roles: " + response.body());
             }
-        } catch (WebApplicationException e) {
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to assign roles: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to assign roles: " + e.getMessage());
         }
     }
 
@@ -411,8 +395,7 @@ public class KeycloakAdminClient {
         } catch (Exception e) {
             // ignore
         }
-        throw new WebApplicationException("Sales client not found in Keycloak",
-                Response.Status.INTERNAL_SERVER_ERROR);
+        throw new ServerErrorException("Sales client not found in Keycloak");
     }
 
     public Map<String, String> getTokenForUser(String username, String password) {
@@ -434,13 +417,11 @@ public class KeycloakAdminClient {
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 401 || response.statusCode() == 400) {
-                throw new WebApplicationException("Invalid username or password",
-                        Response.Status.UNAUTHORIZED);
+                throw new UnAuthorizedException("Invalid username or password");
             }
 
             if (response.statusCode() != 200) {
-                throw new WebApplicationException("Failed to get token: " + response.body(),
-                        Response.Status.INTERNAL_SERVER_ERROR);
+                throw new ServerErrorException("Failed to get token: " + response.body());
             }
 
             JsonNode json = MAPPER.readTree(response.body());
@@ -453,11 +434,10 @@ public class KeycloakAdminClient {
             tokenResponse.put("scope", json.has("scope") ? json.get("scope").asText() : "");
 
             return tokenResponse;
-        } catch (WebApplicationException e) {
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException | UnAuthorizedException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to authenticate user: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to authenticate user: " + e.getMessage());
         }
     }
 
@@ -479,13 +459,11 @@ public class KeycloakAdminClient {
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 400) {
-                throw new WebApplicationException("Invalid or expired refresh token",
-                        Response.Status.UNAUTHORIZED);
+                throw new UnAuthorizedException("Invalid or expired refresh token");
             }
 
             if (response.statusCode() != 200) {
-                throw new WebApplicationException("Failed to refresh token: " + response.body(),
-                        Response.Status.INTERNAL_SERVER_ERROR);
+                throw new ServerErrorException("Failed to refresh token: " + response.body());
             }
 
             JsonNode json = MAPPER.readTree(response.body());
@@ -498,11 +476,10 @@ public class KeycloakAdminClient {
             tokenResponse.put("scope", json.has("scope") ? json.get("scope").asText() : "");
 
             return tokenResponse;
-        } catch (WebApplicationException e) {
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException | UnAuthorizedException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to refresh token: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to refresh token: " + e.getMessage());
         }
     }
 
@@ -524,14 +501,12 @@ public class KeycloakAdminClient {
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 204 && response.statusCode() != 200) {
-                throw new WebApplicationException("Failed to revoke token: " + response.body(),
-                        Response.Status.BAD_REQUEST);
+                throw new BadRequestException("Failed to revoke token: " + response.body());
             }
-        } catch (WebApplicationException e) {
+        } catch (BadRequestException | ResourceNotFoundException | ConflictException | ServerErrorException | UnAuthorizedException e) {
             throw e;
         } catch (Exception e) {
-            throw new WebApplicationException("Failed to revoke token: " + e.getMessage(),
-                    Response.Status.INTERNAL_SERVER_ERROR);
+            throw new ServerErrorException("Failed to revoke token: " + e.getMessage());
         }
     }
 }

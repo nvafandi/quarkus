@@ -23,7 +23,6 @@ public class KeycloakUserSyncApiTest {
                 "username": "%s",
                 "password": "TestPass123!",
                 "email": "%s@example.com",
-                "emailVerified": true,
                 "roles": ["USER"]
             }
             """.formatted(uniqueUsername, uniqueUsername);
@@ -34,7 +33,7 @@ public class KeycloakUserSyncApiTest {
             .contentType(ContentType.JSON)
             .body(json)
         .when()
-            .post("/api/keycloak/users")
+            .post("/api/users")
         .then()
             .statusCode(anyOf(
                 is(201),  // Success - user created and synced
@@ -52,8 +51,7 @@ public class KeycloakUserSyncApiTest {
             {
                 "username": "%s",
                 "password": "TestPass123!",
-                "email": "%s@example.com",
-                "emailVerified": true
+                "email": "%s@example.com"
             }
             """.formatted(uniqueUsername, uniqueUsername);
 
@@ -61,7 +59,7 @@ public class KeycloakUserSyncApiTest {
             .contentType(ContentType.JSON)
             .body(json)
         .when()
-            .post("/api/keycloak/users")
+            .post("/api/users")
         .then()
             .statusCode(anyOf(
                 is(201),
@@ -84,7 +82,7 @@ public class KeycloakUserSyncApiTest {
         given()
             .pathParam("id", testKeycloakId)
         .when()
-            .delete("/api/keycloak/users/{id}")
+            .delete("/api/users/{id}")
         .then()
             .statusCode(anyOf(
                 is(204),  // Success
@@ -108,7 +106,7 @@ public class KeycloakUserSyncApiTest {
             .contentType(ContentType.JSON)
             .body(json)
         .when()
-            .post("/api/keycloak/users")
+            .post("/api/users")
         .then()
             .statusCode(400);
     }
@@ -119,7 +117,7 @@ public class KeycloakUserSyncApiTest {
     public void testListUsers() {
         given()
         .when()
-            .get("/api/keycloak/users")
+            .get("/api/users")
         .then()
             .statusCode(anyOf(
                 is(200),  // Success
@@ -134,7 +132,7 @@ public class KeycloakUserSyncApiTest {
         given()
             .pathParam("id", "test-user-id")
         .when()
-            .get("/api/keycloak/users/{id}")
+            .get("/api/users/{id}")
         .then()
             .statusCode(anyOf(
                 is(200),  // Found
@@ -152,7 +150,7 @@ public class KeycloakUserSyncApiTest {
         given()
             .pathParam("username", testUsername)
         .when()
-            .get("/api/keycloak/users/username/{username}")
+            .get("/api/users/username/{username}")
         .then()
             .statusCode(anyOf(
                 is(200),  // Found
