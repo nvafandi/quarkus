@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
@@ -37,6 +38,9 @@ public class ProductResource {
 
     @Inject
     SecurityIdentity securityIdentity;
+
+    @Inject
+    jakarta.enterprise.inject.Instance<JsonWebToken> jwtInstance;
 
     @GET
     @Operation(summary = "Get all products", description = "Retrieve a list of all products")
@@ -89,18 +93,30 @@ public class ProductResource {
 
     private UUID syncUserIdFromSecurity() {
         try {
-            String username = securityIdentity.getPrincipal().getName();
-            UserDTO user = userService.findByKeycloakId(username);
-            
+            String keycloakId = null;
+            String username = null;
+
+            // Get Keycloak UUID from JWT token if OIDC is enabled
+            if (jwtInstance.isResolvable()) {
+                JsonWebToken jwt = jwtInstance.get();
+                keycloakId = jwt.getSubject();
+                username = jwt.getName();
+            }
+
+            if (keycloakId == null || keycloakId.isBlank()) {
+                return null;
+            }
+
+            UserDTO user = userService.findByKeycloakId(keycloakId);
+
             if (user != null) {
                 return user.getId();
             }
-            
+
             // Auto-create local user record if not exists
-            user = userService.createOrUpdateFromKeycloak(username, username, "USER");
+            user = userService.createOrUpdateFromKeycloak(keycloakId, username, "USER");
             return user.getId();
         } catch (Exception e) {
-            // Return null if unable to get user
             return null;
         }
     }

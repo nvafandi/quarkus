@@ -41,6 +41,9 @@ public class KeycloakAdminClient {
     @ConfigProperty(name = "keycloak.admin.target-realm", defaultValue = "sales-realm")
     String targetRealm;
 
+    @ConfigProperty(name = "quarkus.oidc.credentials.secret")
+    String clientSecret;
+
     private volatile String adminToken;
     private volatile long tokenExpiry;
 
@@ -410,5 +413,125 @@ public class KeycloakAdminClient {
         }
         throw new WebApplicationException("Sales client not found in Keycloak",
                 Response.Status.INTERNAL_SERVER_ERROR);
+    }
+
+    public Map<String, String> getTokenForUser(String username, String password) {
+        try {
+            String tokenUrl = keycloakUrl + "/realms/" + targetRealm + "/protocol/openid-connect/token";
+
+            String body = "client_id=sales-client"
+                    + "&client_secret=" + clientSecret
+                    + "&grant_type=password"
+                    + "&username=" + username
+                    + "&password=" + password;
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(tokenUrl))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 401 || response.statusCode() == 400) {
+                throw new WebApplicationException("Invalid username or password",
+                        Response.Status.UNAUTHORIZED);
+            }
+
+            if (response.statusCode() != 200) {
+                throw new WebApplicationException("Failed to get token: " + response.body(),
+                        Response.Status.INTERNAL_SERVER_ERROR);
+            }
+
+            JsonNode json = MAPPER.readTree(response.body());
+            Map<String, String> tokenResponse = new HashMap<>();
+            tokenResponse.put("accessToken", json.get("access_token").asText());
+            tokenResponse.put("refreshToken", json.get("refresh_token").asText());
+            tokenResponse.put("expiresIn", String.valueOf(json.get("expires_in").asInt()));
+            tokenResponse.put("refreshExpiresIn", String.valueOf(json.get("refresh_expires_in").asInt()));
+            tokenResponse.put("tokenType", json.get("token_type").asText());
+            tokenResponse.put("scope", json.has("scope") ? json.get("scope").asText() : "");
+
+            return tokenResponse;
+        } catch (WebApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new WebApplicationException("Failed to authenticate user: " + e.getMessage(),
+                    Response.Status.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public Map<String, String> refreshToken(String refreshToken) {
+        try {
+            String tokenUrl = keycloakUrl + "/realms/" + targetRealm + "/protocol/openid-connect/token";
+
+            String body = "client_id=sales-client"
+                    + "&client_secret=" + clientSecret
+                    + "&grant_type=refresh_token"
+                    + "&refresh_token=" + refreshToken;
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(tokenUrl))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 400) {
+                throw new WebApplicationException("Invalid or expired refresh token",
+                        Response.Status.UNAUTHORIZED);
+            }
+
+            if (response.statusCode() != 200) {
+                throw new WebApplicationException("Failed to refresh token: " + response.body(),
+                        Response.Status.INTERNAL_SERVER_ERROR);
+            }
+
+            JsonNode json = MAPPER.readTree(response.body());
+            Map<String, String> tokenResponse = new HashMap<>();
+            tokenResponse.put("accessToken", json.get("access_token").asText());
+            tokenResponse.put("refreshToken", json.has("refresh_token") ? json.get("refresh_token").asText() : "");
+            tokenResponse.put("expiresIn", String.valueOf(json.get("expires_in").asInt()));
+            tokenResponse.put("refreshExpiresIn", json.has("refresh_expires_in") ? String.valueOf(json.get("refresh_expires_in").asInt()) : "");
+            tokenResponse.put("tokenType", json.get("token_type").asText());
+            tokenResponse.put("scope", json.has("scope") ? json.get("scope").asText() : "");
+
+            return tokenResponse;
+        } catch (WebApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new WebApplicationException("Failed to refresh token: " + e.getMessage(),
+                    Response.Status.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public void revokeToken(String refreshToken) {
+        try {
+            String revokeUrl = keycloakUrl + "/realms/" + targetRealm + "/protocol/openid-connect/revoke";
+
+            String body = "client_id=sales-client"
+                    + "&client_secret=" + clientSecret
+                    + "&token=" + refreshToken
+                    + "&token_type_hint=refresh_token";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(revokeUrl))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 204 && response.statusCode() != 200) {
+                throw new WebApplicationException("Failed to revoke token: " + response.body(),
+                        Response.Status.BAD_REQUEST);
+            }
+        } catch (WebApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new WebApplicationException("Failed to revoke token: " + e.getMessage(),
+                    Response.Status.INTERNAL_SERVER_ERROR);
+        }
     }
 }

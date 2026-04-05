@@ -65,7 +65,7 @@ public class InsertProductsTest {
                     successCount++;
                     if (i % 20 == 0 || i <= 5) {
                         var jsonPath = response.jsonPath();
-                        System.out.printf("[%3d/100] ✅ Created: %-35s | createdBy: %s%n",
+                        System.out.printf("[%3d/100] Created: %-35s | createdBy: %s%n",
                                 i, 
                                 name.length() > 35 ? name.substring(0, 32) + "..." : name,
                                 jsonPath.getString("data.createdBy"));
@@ -75,16 +75,16 @@ public class InsertProductsTest {
                 }
             } catch (Exception e) {
                 failCount++;
-                System.out.printf("[%3d/100] ❌ Error: %s%n", i, e.getMessage());
+                System.out.printf("[%3d/100] Error: %s%n", i, e.getMessage());
             }
         }
 
         System.out.println("\n==========================================");
         System.out.println(" Summary");
         System.out.println("==========================================");
-        System.out.println("✅ Success: " + successCount);
-        System.out.println("❌ Failed:   " + failCount);
-        System.out.println("📊 Total:   100");
+        System.out.println("Success: " + successCount);
+        System.out.println("Failed:   " + failCount);
+        System.out.println("Total:   100");
         System.out.println("==========================================\n");
 
         Assertions.assertEquals(100, successCount + failCount, "Total should be 100");
@@ -133,15 +133,15 @@ public class InsertProductsTest {
             Object updatedBy = firstProduct.get("updatedBy");
             
             if (createdBy != null) {
-                System.out.println("\n✅ User tracking is working - createdBy: " + createdBy);
+                System.out.println("\nUser tracking is working - createdBy: " + createdBy);
             } else {
-                System.out.println("\n⚠️  User tracking not active - createdBy is null");
+                System.out.println("\nUser tracking not active - createdBy is null");
                 System.out.println("   (This is expected if no local user record exists for testuser)");
             }
         }
 
         System.out.println("\n==========================================");
-        System.out.println(" ✅ Field verification complete");
+        System.out.println("Field verification complete");
         System.out.println("==========================================\n");
     }
 

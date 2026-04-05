@@ -17,7 +17,10 @@ public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
         int status;
         String message;
 
-        if (exception instanceof WebApplicationException) {
+        if (exception instanceof jakarta.ws.rs.NotAuthorizedException) {
+            status = Response.Status.UNAUTHORIZED.getStatusCode();
+            message = "Unauthorized - valid authentication required";
+        } else if (exception instanceof WebApplicationException) {
             WebApplicationException webEx = (WebApplicationException) exception;
             status = webEx.getResponse().getStatus();
             message = webEx.getMessage() != null ? webEx.getMessage() : "Web application error";

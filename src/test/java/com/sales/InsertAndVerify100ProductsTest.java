@@ -62,7 +62,7 @@ public class InsertAndVerify100ProductsTest {
             
             if (i % 20 == 0 || i <= 5) {
                 var jsonPath = response.jsonPath();
-                System.out.printf("[%3d/100] ✅ Created: %-35s | Price: %10s | createdBy: %s%n",
+                System.out.printf("[%3d/100] Created: %-35s | Price: %10s | createdBy: %s%n",
                         i, 
                         name.length() > 35 ? name.substring(0, 32) + "..." : name,
                         price,
@@ -71,7 +71,7 @@ public class InsertAndVerify100ProductsTest {
         }
 
         System.out.println("\n==========================================");
-        System.out.println(" ✅ Successfully inserted 100 products!");
+        System.out.println("Successfully inserted 100 products!");
         System.out.println("==========================================\n");
 
         Assertions.assertEquals(100, successCount, "Should insert 100 products");
@@ -105,7 +105,7 @@ public class InsertAndVerify100ProductsTest {
         System.out.println("==========================================");
         System.out.println(" Product List Verification");
         System.out.println("==========================================");
-        System.out.println("📊 Total Products in Database: " + products.size());
+        System.out.println("Total Products in Database: " + products.size());
         System.out.println("==========================================\n");
 
         Assertions.assertEquals(100, products.size(), "Should have exactly 100 products");
@@ -218,7 +218,7 @@ public class InsertAndVerify100ProductsTest {
         System.out.printf("  Created By: %s%n", product.get("createdBy") != null ? product.get("createdBy") : "N/A");
         System.out.printf("  Updated By: %s%n", product.get("updatedBy") != null ? product.get("updatedBy") : "N/A");
         System.out.println();
-        System.out.println("✅ Single product retrieval verified!");
+        System.out.println("Single product retrieval verified!");
     }
 
     private String generateModelNumber() {

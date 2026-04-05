@@ -1,4 +1,4 @@
-#Maven
+d#Maven
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -51,3 +51,5 @@ docker-compose.yml
 /.quarkus/cli/plugins/
 # TLS Certificates
 .certs/
+# Local test/demo scripts (do not push to GitHub)
+test-*.sh

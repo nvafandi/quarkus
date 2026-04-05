@@ -69,15 +69,15 @@ public class CreateUserEndpointTest {
         
         if (statusCode == 201) {
             // Success - should return synced UserDTO
-            System.out.println("✅ SUCCESS: User created in Keycloak and synced to local DB");
+            System.out.println("SUCCESS: User created in Keycloak and synced to local DB");
             response.then()
                 .body(is(notNullValue()));
         } else if (statusCode == 400) {
-            System.out.println("⚠️  BAD REQUEST: Validation error or Keycloak connection issue");
+            System.out.println("BAD REQUEST: Validation error or Keycloak connection issue");
         } else if (statusCode == 409) {
-            System.out.println("⚠️  CONFLICT: Username already exists");
+            System.out.println("CONFLICT: Username already exists");
         } else if (statusCode == 500) {
-            System.out.println("⚠️  SERVER ERROR: Keycloak unavailable (expected in test env)");
+            System.out.println("SERVER ERROR: Keycloak unavailable (expected in test env)");
         }
     }
 
@@ -109,7 +109,7 @@ public class CreateUserEndpointTest {
         System.out.println("\nResponse:");
         System.out.println("HTTP Status: " + response.getStatusCode());
         System.out.println("Response Body: " + response.getBody().asPrettyString());
-        System.out.println("\n✅ EXPECTED: 400 Bad Request (password is required)");
+        System.out.println("\nEXPECTED: 400 Bad Request (password is required)");
     }
 
     @Test
@@ -131,9 +131,9 @@ public class CreateUserEndpointTest {
         System.out.println("HTTP Status: " + response.getStatusCode());
         
         if (response.getStatusCode() == 200) {
-            System.out.println("✅ SUCCESS: Retrieved user list");
+            System.out.println("SUCCESS: Retrieved user list");
         } else {
-            System.out.println("⚠️  Keycloak unavailable");
+            System.out.println("Keycloak unavailable");
         }
     }
 
@@ -161,11 +161,11 @@ public class CreateUserEndpointTest {
         System.out.println("HTTP Status: " + response.getStatusCode());
         
         if (response.getStatusCode() == 204) {
-            System.out.println("✅ SUCCESS: User deleted from Keycloak and local DB");
+            System.out.println("SUCCESS: User deleted from Keycloak and local DB");
         } else if (response.getStatusCode() == 404) {
-            System.out.println("⚠️  User not found");
+            System.out.println("User not found");
         } else {
-            System.out.println("⚠️  Keycloak unavailable");
+            System.out.println("Keycloak unavailable");
         }
     }
 }

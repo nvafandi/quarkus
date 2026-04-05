@@ -46,8 +46,8 @@ docker compose logs -f keycloak
 |---|---|---|
 | App | http://localhost:8080 | N/A |
 | Swagger UI | http://localhost:8080/swagger-ui | N/A |
-| Keycloak Admin | http://localhost:8180 | admin / XXX |
-| PostgreSQL | localhost:5432 | XXX / XXX |
+| Keycloak Admin | http://localhost:8180 | <your_admin_username> / <your_admin_password> |
+| PostgreSQL | localhost:5432 | <your_db_username> / <your_db_password> |
 
 ## Keycloak Setup
 
@@ -63,7 +63,7 @@ Keycloak 24+ enables a **User Profile** feature by default that marks `email`, `
 
 ```bash
 ADMIN_TOKEN=$(curl -s -X POST http://localhost:8180/realms/master/protocol/openid-connect/token \
-  -d "client_id=admin-cli&grant_type=password&username=admin&password=XXX" \
+  -d "client_id=admin-cli&grant_type=password&username=<your_admin_username>&password=<your_admin_password>" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 curl -s -X PUT http://localhost:8180/admin/realms/sales-realm/users/profile \
@@ -85,16 +85,17 @@ The Keycloak realm (`sales-realm`) is pre-configured with these users:
 
 | Username | Password | Role |
 |---|---|---|
-| admin | XXX | ADMIN |
-| cashier1 | XXX | CASHIER |
-| manager1 | XXX | MANAGER |
+| admin | <your_admin_password> | ADMIN |
+| cashier1 | <your_cashier_password> | CASHIER |
+| manager1 | <your_manager_password> | MANAGER |
+| <your_username> | <your_user_password> | ADMIN |
 
 ### Client Configuration
 
 | Setting | Value |
 |---|---|
 | Client ID | `sales-client` |
-| Client Secret | `XXX` |
+| Client Secret | `<your_client_secret>` |
 | Type | Confidential |
 | Direct Access Grants | Enabled |
 | Valid Redirect URIs | `http://localhost:8080/*`, `http://localhost:5000/*` |
@@ -155,22 +156,22 @@ docker compose up -d
 ### PostgreSQL
 
 ```bash
-docker run -d --name postgres -e POSTGRES_PASSWORD=XXX -p 5432:5432 postgres:17
-docker exec -it postgres psql -U XXX -d postgres -c "CREATE DATABASE sales_db;"
-docker exec -it postgres psql -U XXX -d postgres -c "CREATE DATABASE keycloak_db;"
+docker run -d --name postgres -e POSTGRES_PASSWORD=<your_db_password> -p 5432:5432 postgres:17
+docker exec -it postgres psql -U <your_db_username> -d postgres -c "CREATE DATABASE sales_db;"
+docker exec -it postgres psql -U <your_db_username> -d postgres -c "CREATE DATABASE keycloak_db;"
 ```
 
 ### Keycloak
 
 ```bash
 docker run -d --name keycloak \
-  -e KEYCLOAK_ADMIN=XXX -e KEYCLOAK_ADMIN_PASSWORD=XXX \
+  -e KEYCLOAK_ADMIN=<your_admin_username> -e KEYCLOAK_ADMIN_PASSWORD=<your_admin_password> \
   -e KC_DB=postgres \
   -e KC_DB_URL_HOST=<postgres-container-ip> \
   -e KC_DB_URL_PORT=5432 \
   -e KC_DB_URL_DATABASE=keycloak_db \
-  -e KC_DB_USERNAME=XXX \
-  -e KC_DB_PASSWORD=XXX \
+  -e KC_DB_USERNAME=<your_db_username> \
+  -e KC_DB_PASSWORD=<your_db_password> \
   -p 8180:8080 \
   -v $(pwd)/keycloak/realm:/opt/keycloak/data/import \
   quay.io/keycloak/keycloak:24.0 start-dev --import-realm
@@ -188,14 +189,14 @@ After Keycloak starts:
 # Start PostgreSQL container
 docker run -d \
   --name postgres \
-  -e POSTGRES_USER=XXX \
-  -e POSTGRES_PASSWORD=XXX \
+  -e POSTGRES_USER=<your_db_username> \
+  -e POSTGRES_PASSWORD=<your_db_password> \
   -p 5432:5432 \
   postgres:17
 
 # Create databases
-docker exec -it postgres psql -U XXX -d postgres -c "CREATE DATABASE sales_db;"
-docker exec -it postgres psql -U XXX -d postgres -c "CREATE DATABASE keycloak_db;"
+docker exec -it postgres psql -U <your_db_username> -d postgres -c "CREATE DATABASE sales_db;"
+docker exec -it postgres psql -U <your_db_username> -d postgres -c "CREATE DATABASE keycloak_db;"
 ```
 
 ## DDL Statements
@@ -210,7 +211,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Users table
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    id UUID PRIMARY KEY,
+    keycloak_id VARCHAR(255) UNIQUE,
     username VARCHAR(100) NOT NULL UNIQUE,
     role VARCHAR(50),
     created_at TIMESTAMP,
@@ -219,17 +221,19 @@ CREATE TABLE users (
 
 -- Products table
 CREATE TABLE products (
-    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    id UUID PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     price NUMERIC(15, 2) NOT NULL,
     stock INTEGER NOT NULL,
+    created_by UUID,
+    updated_by UUID,
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );
 
 -- Transactions table
 CREATE TABLE transactions (
-    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
     total_amount NUMERIC(15, 2) NOT NULL,
     created_at TIMESTAMP,
@@ -239,7 +243,7 @@ CREATE TABLE transactions (
 
 -- Transaction Items table
 CREATE TABLE transaction_items (
-    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    id UUID PRIMARY KEY,
     transaction_id UUID NOT NULL,
     product_id UUID NOT NULL,
     quantity INTEGER NOT NULL,
@@ -251,6 +255,8 @@ CREATE TABLE transaction_items (
 );
 
 -- Indexes for better query performance
+CREATE INDEX idx_users_keycloak_id ON users(keycloak_id);
+CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX idx_transaction_items_transaction_id ON transaction_items(transaction_id);
 CREATE INDEX idx_transaction_items_product_id ON transaction_items(product_id);
@@ -259,13 +265,19 @@ CREATE INDEX idx_transaction_items_product_id ON transaction_items(product_id);
 ### Schema Notes
 - **UUIDv7**: Time-ordered UUIDs generated by `xyz.block.uuidv7.UUIDv7.generate()` in entity `@PrePersist` callbacks
 - UUIDv7 provides chronological ordering, reducing index fragmentation compared to random UUIDs
-- `users.username` has a unique constraint to prevent duplicate usernames
+- **Users table**:
+  - `keycloak_id`: Links local user to Keycloak user (unique, nullable)
+  - `username`: Unique constraint to prevent duplicate usernames
+  - No password column — authentication handled by Keycloak SSO
+- **Products table**:
+  - `created_by`: UUID of user who created the product (from JWT token)
+  - `updated_by`: UUID of user who last updated the product (from JWT token)
+  - Both are read-only in API responses
 - Foreign key constraints ensure referential integrity between related tables
 - Monetary values use `NUMERIC(15, 2)` for precision (up to 13 digits + 2 decimal places)
 - **`created_at`**: Automatically set when record is created via JPA `@PrePersist`
-- **`updated_at`**: Automatically updated on every update via JPA `@PreUpdate`
-- Cascading deletes: When a transaction is deleted, all its items are automatically deleted (orphanRemoval)
-- **No password column in `users` table** — authentication is handled entirely by Keycloak SSO
+- **`updated_at`**: Automatically updated on every change via JPA `@PreUpdate`
+- Cascading deletes: When a transaction is deleted, all its items are automatically deleted (`orphanRemoval`)
 
 ### UUID v7 Format Example
 ```
@@ -293,8 +305,8 @@ quarkus.http.port=5000
 
 # Database Configuration - PostgreSQL
 quarkus.datasource.db-kind=postgresql
-quarkus.datasource.username=XXX
-quarkus.datasource.password=XXX
+quarkus.datasource.username=<your_db_username>
+quarkus.datasource.password=<your_db_password>
 quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/sales_db
 quarkus.datasource.jdbc.max-size=16
 quarkus.datasource.jdbc.min-size=4
@@ -307,16 +319,16 @@ quarkus.hibernate-orm.log.format-sql=true
 # OIDC Configuration (Keycloak)
 quarkus.oidc.auth-server-url=http://localhost:8180/realms/sales-realm
 quarkus.oidc.client-id=sales-client
-quarkus.oidc.credentials.secret=XXX
-quarkus.oidc.application-type=web-app
-quarkus.oidc.authentication.scopes=openid,profile,email,roles
+quarkus.oidc.credentials.secret=<your_client_secret>
+quarkus.oidc.application-type=hybrid
+quarkus.oidc.authentication.scopes=openid profile email roles
 quarkus.oidc.roles.role-claim-name=resource_access.${quarkus.oidc.client-id}.roles
 
 # Keycloak Admin API Configuration
 keycloak.admin.url=http://localhost:8180
 keycloak.admin.realm=master
-keycloak.admin.username=XXX
-keycloak.admin.password=XXX
+keycloak.admin.username=<your_admin_username>
+keycloak.admin.password=<your_admin_password>
 keycloak.admin.target-realm=sales-realm
 ```
 
@@ -345,10 +357,10 @@ All API endpoints are protected by **Keycloak SSO** using OAuth2/OpenID Connect:
 # 1. Get access token from Keycloak
 TOKEN=$(curl -s -X POST http://localhost:8180/realms/sales-realm/protocol/openid-connect/token \
   -d "client_id=sales-client" \
-  -d "client_secret=XXX" \
+  -d "client_secret=<your_client_secret>" \
   -d "grant_type=password" \
   -d "username=admin" \
-  -d "password=XXX" | jq -r '.access_token')
+  -d "password=<your_admin_password>" | jq -r '.access_token')
 
 # 2. Use token to access API
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/users
@@ -365,6 +377,88 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/auth/userinfo
 | `/auth/roles` | Get current user's roles |
 | `/auth/check` | Check authentication status |
 | `/api/*` | All protected by `@Authenticated` |
+
+### Token Management API
+
+A simplified token management API is available for direct authentication without browser-based flow:
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/auth/login` | Login with username/password, get access + refresh tokens |
+| `POST` | `/auth/refresh` | Use refresh token to get new access token |
+| `POST` | `/auth/revoke` | Revoke refresh token to invalidate session |
+
+**Login Example:**
+
+```bash
+# 1. Login - get access and refresh tokens
+curl -s -X POST http://localhost:5000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "<your_admin_password>"
+  }'
+
+# Response:
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "accessToken": "eyJhbGciOiJSUzI1NiIs...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+    "expiresIn": 300,
+    "refreshExpiresIn": 1800,
+    "tokenType": "Bearer",
+    "scope": "openid profile email roles"
+  }
+}
+```
+
+**Request Body (Login):**
+- `username` (required) - Keycloak username
+- `password` (required) - User password
+
+**Response Fields:**
+- `accessToken` - JWT access token for API authorization
+- `refreshToken` - JWT refresh token for getting new access tokens
+- `expiresIn` - Access token expiry in seconds
+- `refreshExpiresIn` - Refresh token expiry in seconds
+- `tokenType` - Always "Bearer"
+- `scope` - Granted scopes
+
+**Using Access Token:**
+```bash
+curl -H "Authorization: Bearer <accessToken>" http://localhost:5000/api/products
+```
+
+**Refresh Token (when expired):**
+```bash
+curl -s -X POST http://localhost:5000/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "<refreshToken>"
+  }'
+```
+
+**Revoke Token (logout):**
+```bash
+curl -s -X POST http://localhost:5000/auth/revoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "<refreshToken>"
+  }'
+```
+
+**Error Responses:**
+| Scenario | Status | Message |
+|---|---|---|
+| Invalid username/password | 401 | "Invalid username or password" |
+| Expired refresh token | 401 | "Invalid or expired refresh token" |
+| Missing fields | 400 | Validation error |
+
+### User Authentication in API Requests
+
+For API calls that require authentication, the system extracts the user's Keycloak UUID from the JWT token's `sub` claim. The `createdBy` and `updatedBy` fields in ProductEntity are automatically set from the authenticated user's token - they cannot be manually specified in the request body.
 
 **Roles:**
 - `ADMIN` - Full access to all operations
@@ -461,12 +555,15 @@ sales-system/
 │   │   ├── ProductResource.java      # @Authenticated
 │   │   ├── TransactionResource.java  # @Authenticated
 │   │   ├── KeycloakUserResource.java # Keycloak user management API
+│   │   ├── TokenResource.java        # Token management (login, refresh, revoke)
 │   │   └── GlobalExceptionMapper.java
 │   └── dto/
 │       ├── UserDTO.java              # No password field
 │       ├── ProductDTO.java
 │       ├── TransactionDTO.java
 │       ├── TransactionItemDTO.java
+│       ├── TokenDTO.java             # Token response DTO
+│       ├── LoginRequestDTO.java      # Login request DTO (username + password)
 │       ├── KeycloakUserDTO.java      # Keycloak user create/update DTO
 │       └── ErrorResponse.java
 ├── src/main/resources/
@@ -476,9 +573,14 @@ sales-system/
     ├── EntityIdGenerationTest.java            # Entity ID integration tests
     ├── CrudResourceTest.java                  # Full CRUD API tests
     ├── UserResourceTest.java                  # User API tests
+    ├── TokenResourceTest.java                 # Token login, refresh, revoke tests
+    ├── NurvanLoginTest.java                   # User-specific login and token tests
     ├── KeycloakAdminClientTest.java           # KeycloakAdminClient service tests
     ├── KeycloakUserResourceTest.java          # Keycloak user management API tests
+    ├── KeycloakUserSyncApiTest.java           # Keycloak user sync API tests
     ├── UserSyncServiceTest.java               # User sync (Keycloak ↔ Local DB) tests
+    ├── GetProductsTest.java                   # Product retrieval tests
+    ├── InsertProductsTest.java                # Product insertion tests
     ├── InsertAndVerify100ProductsTest.java    # Product creation with user tracking tests
     └── CreateUserEndpointTest.java            # Keycloak user creation endpoint tests
 ```
@@ -512,12 +614,17 @@ sales-system/
 | `EntityIdGenerationTest` | 4 | Entity ID generation for all 4 entity types |
 | `CrudResourceTest` | 29 | Full CRUD operations for Users, Products, and Transactions |
 | `UserResourceTest` | 3 | Basic user API integration tests |
+| `TokenResourceTest` | 7 | Token login, refresh, revoke endpoint tests |
+| `NurvanLoginTest` | 4 | User-specific login and token tests |
 | `KeycloakAdminClientTest` | 12 | KeycloakAdminClient service layer tests |
 | `KeycloakUserResourceTest` | 13 | Keycloak user management API endpoint tests |
+| `KeycloakUserSyncApiTest` | 7 | Keycloak user sync API tests |
 | `UserSyncServiceTest` | 6 | Keycloak ↔ Local DB user synchronization tests |
+| `GetProductsTest` | 3 | Product retrieval with dummy data insertion |
+| `InsertProductsTest` | 2 | Product creation with user tracking verification |
 | `InsertAndVerify100ProductsTest` | 3 | Product creation with user tracking verification |
 | `CreateUserEndpointTest` | 4 | Keycloak user creation endpoint tests |
-| **Total** | **80** | |
+| **Total** | **99** | |
 
 ### Test Structure
 
@@ -608,11 +715,39 @@ Products track who created and last updated them via `createdBy` and `updatedBy`
 
 ### How User Tracking Works
 
-1. Authenticated user calls `POST /api/products` or `PUT /api/products/{id}`
-2. `ProductResource` extracts username from `SecurityIdentity`
-3. Looks up local user by Keycloak username via `UserService.findByKeycloakId()`
-4. If user doesn't exist → auto-creates via `createOrUpdateFromKeycloak()`
+1. Authenticated user calls `POST /api/products` or `PUT /api/products/{id}` with JWT Bearer token
+2. `ProductResource` extracts Keycloak UUID from JWT token's `sub` claim via `JsonWebToken`
+3. Looks up local user by `keycloakId` in database
+4. If user doesn't exist → auto-creates local user record
 5. Local user's UUID stored in `createdBy` / `updatedBy`
+6. Request body `createdBy` and `updatedBy` fields are ignored (read-only in responses)
+
+### Product DTO Fields
+
+**Request Body (POST/PUT) - Accepted Fields:**
+```json
+{
+  "name": "Laptop Pro 15",
+  "price": 1500000.00,
+  "stock": 50
+}
+```
+
+**Response Body (GET/POST/PUT) - All Fields:**
+```json
+{
+  "id": "019d54c8-...",
+  "name": "Laptop Pro 15",
+  "price": 1500000.00,
+  "stock": 50,
+  "createdAt": "2026-04-05T14:00:00",
+  "updatedAt": "2026-04-05T14:00:00",
+  "createdBy": "59b08f3c-...",
+  "updatedBy": "59b08f3c-..."
+}
+```
+
+Note: `createdBy` and `updatedBy` are read-only. They are automatically set from the authenticated user's JWT token.
 
 ## Notes
 - **Authentication via Keycloak SSO** - All API endpoints protected by OAuth2/OIDC
@@ -620,24 +755,28 @@ Products track who created and last updated them via `createdBy` and `updatedBy`
   - JWT tokens with embedded roles for authorization
   - `@Authenticated` annotation on all REST resources
   - `AuthResource` provides `/auth/userinfo`, `/auth/roles`, `/auth/check` endpoints
+  - `TokenResource` provides `/auth/login`, `/auth/refresh`, `/auth/revoke` endpoints
+  - OIDC application type: `hybrid` (supports both browser flow and Bearer token authentication)
 - **No password field in UserEntity/UserDTO** - Passwords managed entirely by Keycloak
 - **All primary keys use UUID v7** - Time-ordered, sortable identifiers via `xyz.block:uuidv7`
 - **All entities have `created_at` and `updated_at` timestamps**
   - `created_at`: Auto-set on insert via JPA `@PrePersist`
   - `updated_at`: Auto-updated on every change via JPA `@PreUpdate`
 - **All DTOs include `createdAt` and `updatedAt` fields** for API responses
+- **ProductDTO** - `createdBy` and `updatedBy` are read-only (auto-set from JWT token)
 - **API Documentation** - Interactive Swagger UI at `/swagger-ui`
   - OpenAPI 3.1 spec at `/q/openapi`
   - All endpoints documented with request/response schemas
 - Stock validation before creating transaction
 - Transaction management in service layer
 - DTO pattern for API communication
-- Global exception handling
+- Global exception handling with unified `ApiResponse<T>` format
 - **Quarkus 3.17.0** with Java 21
 - **Docker Compose** for local development (PostgreSQL + Keycloak + App)
 - **Tests use H2 database + @TestSecurity** for fast, isolated test execution
 - **Keycloak 24.0** — Do not upgrade to 25/26 (credential persistence bug)
 - **Quarkus app listens on port 5000** internally, Docker maps to host port 8080
+- **OIDC scopes**: `openid profile email roles` (space-separated, not comma-separated)
 
 ## API Response Format
 

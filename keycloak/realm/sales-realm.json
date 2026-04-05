@@ -86,6 +86,24 @@
       "clientRoles": {
         "sales-client": ["MANAGER"]
       }
+    },
+    {
+      "username": "nurvan",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "nurvan@example.com",
+      "firstName": "Nurvan",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "sales-client": ["ADMIN"]
+      }
     }
   ],
   "clients": [

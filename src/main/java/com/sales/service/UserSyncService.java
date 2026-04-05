@@ -79,6 +79,12 @@ public class UserSyncService {
         LOG.infof("Sync completed: %d synced, %d errors", synced, errors);
     }
 
+    @Transactional
+    public UserDTO syncUserByUsername(String username) {
+        Map<String, Object> keycloakUser = keycloakAdminClient.getUserByUsername(username);
+        return syncUserFromKeycloak(keycloakUser);
+    }
+
     private String extractRoleFromKeycloak(String keycloakId) {
         try {
             List<String> roles = keycloakAdminClient.getUserRoles(keycloakId);

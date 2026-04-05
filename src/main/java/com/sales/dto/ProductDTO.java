@@ -1,5 +1,6 @@
 package com.sales.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -39,9 +40,11 @@ public class ProductDTO {
     @Schema(description = "Record last update timestamp")
     private LocalDateTime updatedAt;
 
-    @Schema(description = "User who created this product")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "User who created this product (auto-set from authenticated user)")
     private UUID createdBy;
 
-    @Schema(description = "User who last updated this product")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Schema(description = "User who last updated this product (auto-set from authenticated user)")
     private UUID updatedBy;
 }
