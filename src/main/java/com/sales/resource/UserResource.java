@@ -5,6 +5,7 @@ import com.sales.dto.UserDTO;
 import com.sales.exception.BadRequestException;
 import com.sales.service.KeycloakAdminClient;
 import com.sales.service.UserSyncService;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -54,13 +55,15 @@ public class UserResource {
     @Operation(summary = "Get Keycloak user by ID", description = "Returns a single user from Keycloak by ID")
     @APIResponse(responseCode = "200", description = "User found")
     @APIResponse(responseCode = "404", description = "User not found")
-    public Response getUserById(
+    public Uni<Response> getUserById(
             @Parameter(description = "Keycloak user ID", required = true)
             @PathParam("id") String id) {
-        Map<String, Object> user = keycloakAdminClient.getUserById(id);
-        List<String> roles = keycloakAdminClient.getUserRoles(id);
-        user.put("roles", roles);
-        return Response.ok(user).build();
+        return Uni.createFrom().item(() -> {
+            Map<String, Object> user = keycloakAdminClient.getUserById(id);
+            List<String> roles = keycloakAdminClient.getUserRoles(id);
+            user.put("roles", roles);
+            return Response.ok(user).build();
+        });
     }
 
     @GET
@@ -68,14 +71,16 @@ public class UserResource {
     @Operation(summary = "Get Keycloak user by username", description = "Returns a single user from Keycloak by username")
     @APIResponse(responseCode = "200", description = "User found")
     @APIResponse(responseCode = "404", description = "User not found")
-    public Response getUserByUsername(
+    public Uni<Response> getUserByUsername(
             @Parameter(description = "Username", required = true)
             @PathParam("username") String username) {
-        Map<String, Object> user = keycloakAdminClient.getUserByUsername(username);
-        String userId = (String) user.get("id");
-        List<String> roles = keycloakAdminClient.getUserRoles(userId);
-        user.put("roles", roles);
-        return Response.ok(user).build();
+        return Uni.createFrom().item(() -> {
+            Map<String, Object> user = keycloakAdminClient.getUserByUsername(username);
+            String userId = (String) user.get("id");
+            List<String> roles = keycloakAdminClient.getUserRoles(userId);
+            user.put("roles", roles);
+            return Response.ok(user).build();
+        });
     }
 
     @POST
@@ -84,22 +89,21 @@ public class UserResource {
             content = @Content(schema = @Schema(implementation = KeycloakUserDTO.class)))
     @APIResponse(responseCode = "400", description = "Invalid input")
     @APIResponse(responseCode = "409", description = "Username already exists")
-    public Response createUser(@Valid KeycloakUserDTO dto) {
+    public Uni<Response> createUser(@Valid KeycloakUserDTO dto) {
         if (dto.getPassword() == null || dto.getPassword().isBlank()) {
-            throw new BadRequestException("Password is required");
+            return Uni.createFrom().failure(new BadRequestException("Password is required"));
         }
 
-        Map<String, Object> created = keycloakAdminClient.createUser(
-                dto.getUsername(),
-                dto.getPassword(),
-                dto.getEmail(),
-                true,
-                dto.getRoles()
-        );
-
-        UserDTO syncedUser = userSyncService.syncUserFromKeycloak(created);
-
-        return Response.status(Response.Status.CREATED).entity(syncedUser).build();
+        return Uni.createFrom().item(() ->
+            keycloakAdminClient.createUser(
+                    dto.getUsername(),
+                    dto.getPassword(),
+                    dto.getEmail(),
+                    true,
+                    dto.getRoles()
+            )
+        ).chain(created -> userSyncService.syncUserFromKeycloak(created))
+         .map(syncedUser -> Response.status(Response.Status.CREATED).entity(syncedUser).build());
     }
 
     @PUT
@@ -107,18 +111,20 @@ public class UserResource {
     @Operation(summary = "Update Keycloak user", description = "Updates user details in Keycloak (username, email, enabled status)")
     @APIResponse(responseCode = "200", description = "User updated")
     @APIResponse(responseCode = "404", description = "User not found")
-    public Response updateUser(
+    public Uni<Response> updateUser(
             @Parameter(description = "Keycloak user ID", required = true)
             @PathParam("id") String id,
             @Valid KeycloakUserDTO dto) {
-        Map<String, Object> updated = keycloakAdminClient.updateUser(
-                id,
-                dto.getUsername(),
-                dto.getEmail(),
-                true,
-                true
-        );
-        return Response.ok(updated).build();
+        return Uni.createFrom().item(() -> {
+            Map<String, Object> updated = keycloakAdminClient.updateUser(
+                    id,
+                    dto.getUsername(),
+                    dto.getEmail(),
+                    true,
+                    true
+            );
+            return Response.ok(updated).build();
+        });
     }
 
     @PUT
@@ -127,16 +133,18 @@ public class UserResource {
     @APIResponse(responseCode = "204", description = "Password reset successfully")
     @APIResponse(responseCode = "404", description = "User not found")
     @APIResponse(responseCode = "400", description = "Invalid input")
-    public Response resetPassword(
+    public Uni<Response> resetPassword(
             @Parameter(description = "Keycloak user ID", required = true)
             @PathParam("id") String id,
             @Valid KeycloakUserDTO dto) {
         if (dto.getPassword() == null || dto.getPassword().isBlank()) {
-            throw new BadRequestException("Password is required");
+            return Uni.createFrom().failure(new BadRequestException("Password is required"));
         }
 
-        keycloakAdminClient.resetPassword(id, dto.getPassword());
-        return Response.noContent().build();
+        return Uni.createFrom().item(() -> {
+            keycloakAdminClient.resetPassword(id, dto.getPassword());
+            return Response.noContent().build();
+        });
     }
 
     @PUT
@@ -144,17 +152,19 @@ public class UserResource {
     @Operation(summary = "Assign roles to Keycloak user", description = "Assigns client roles to a Keycloak user")
     @APIResponse(responseCode = "204", description = "Roles assigned")
     @APIResponse(responseCode = "404", description = "User not found")
-    public Response assignRoles(
+    public Uni<Response> assignRoles(
             @Parameter(description = "Keycloak user ID", required = true)
             @PathParam("id") String id,
             Map<String, List<String>> body) {
         List<String> roles = body.get("roles");
         if (roles == null) {
-            throw new BadRequestException("Roles list is required");
+            return Uni.createFrom().failure(new BadRequestException("Roles list is required"));
         }
 
-        keycloakAdminClient.assignRoles(id, roles);
-        return Response.noContent().build();
+        return Uni.createFrom().item(() -> {
+            keycloakAdminClient.assignRoles(id, roles);
+            return Response.noContent().build();
+        });
     }
 
     @GET
@@ -162,11 +172,13 @@ public class UserResource {
     @Operation(summary = "Get Keycloak user roles", description = "Returns client roles assigned to a Keycloak user")
     @APIResponse(responseCode = "200", description = "List of roles")
     @APIResponse(responseCode = "404", description = "User not found")
-    public Response getUserRoles(
+    public Uni<Response> getUserRoles(
             @Parameter(description = "Keycloak user ID", required = true)
             @PathParam("id") String id) {
-        List<String> roles = keycloakAdminClient.getUserRoles(id);
-        return Response.ok(Map.of("userId", id, "roles", roles)).build();
+        return Uni.createFrom().item(() -> {
+            List<String> roles = keycloakAdminClient.getUserRoles(id);
+            return Response.ok(Map.of("userId", id, "roles", roles)).build();
+        });
     }
 
     @DELETE
@@ -174,11 +186,14 @@ public class UserResource {
     @Operation(summary = "Delete Keycloak user", description = "Permanently deletes a user from Keycloak and local database")
     @APIResponse(responseCode = "204", description = "User deleted from both Keycloak and local database")
     @APIResponse(responseCode = "404", description = "User not found")
-    public Response deleteUser(
-            @Parameter(description = "Keycloak user ID", required = true)
-            @PathParam("id") String id) {
-        keycloakAdminClient.deleteUser(id);
-        userSyncService.deleteUserByKeycloakId(id);
-        return Response.noContent().build();
+    public Uni<Response> deleteUser(@PathParam("id") String id) {
+        return Uni.createFrom().voidItem()
+                .call(() -> {
+                    keycloakAdminClient.deleteUser(id);
+                    return Uni.createFrom().voidItem();
+                })
+                .chain(() -> userSyncService.deleteUserByKeycloakId(id))
+                .map(v -> Response.noContent().build());
     }
+
 }

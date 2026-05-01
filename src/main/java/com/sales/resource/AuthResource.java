@@ -6,6 +6,7 @@ import com.sales.dto.TokenDTO;
 import com.sales.exception.BadRequestException;
 import com.sales.service.KeycloakAdminClient;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -42,18 +43,20 @@ public class AuthResource {
     @APIResponse(responseCode = "200", description = "Login successful, tokens returned",
             content = @Content(schema = @Schema(implementation = TokenDTO.class)))
     @APIResponse(responseCode = "401", description = "Invalid username or password")
-    public Response login(
+    public Uni<Response> login(
             @RequestBody(description = "Login credentials", required = true,
                     content = @Content(schema = @Schema(implementation = LoginRequestDTO.class)))
             @Valid LoginRequestDTO loginRequest) {
 
-        Map<String, String> tokenResponse = keycloakAdminClient.getTokenForUser(
-                loginRequest.getUsername(),
-                loginRequest.getPassword()
-        );
+        return Uni.createFrom().item(() -> {
+            Map<String, String> tokenResponse = keycloakAdminClient.getTokenForUser(
+                    loginRequest.getUsername(),
+                    loginRequest.getPassword()
+            );
 
-        TokenDTO response = buildTokenDTO(tokenResponse);
-        return Response.ok(ApiResponse.ok(response)).build();
+            TokenDTO response = buildTokenDTO(tokenResponse);
+            return Response.ok(ApiResponse.ok(response)).build();
+        });
     }
 
     @POST
@@ -62,18 +65,20 @@ public class AuthResource {
     @APIResponse(responseCode = "200", description = "Token refreshed successfully",
             content = @Content(schema = @Schema(implementation = TokenDTO.class)))
     @APIResponse(responseCode = "401", description = "Invalid or expired refresh token")
-    public Response refreshToken(
+    public Uni<Response> refreshToken(
             @RequestBody(description = "Refresh token", required = true,
                     content = @Content(schema = @Schema(implementation = TokenDTO.class)))
             @Valid TokenDTO refreshRequest) {
 
         if (refreshRequest.getRefreshToken() == null || refreshRequest.getRefreshToken().isBlank()) {
-            throw new BadRequestException("Refresh token is required");
+            return Uni.createFrom().failure(new BadRequestException("Refresh token is required"));
         }
 
-        Map<String, String> tokenResponse = keycloakAdminClient.refreshToken(refreshRequest.getRefreshToken());
-        TokenDTO response = buildTokenDTO(tokenResponse);
-        return Response.ok(ApiResponse.ok(response)).build();
+        return Uni.createFrom().item(() -> {
+            Map<String, String> tokenResponse = keycloakAdminClient.refreshToken(refreshRequest.getRefreshToken());
+            TokenDTO response = buildTokenDTO(tokenResponse);
+            return Response.ok(ApiResponse.ok(response)).build();
+        });
     }
 
     @POST
@@ -81,17 +86,19 @@ public class AuthResource {
     @Operation(summary = "Revoke refresh token", description = "Revoke a refresh token to invalidate the user session")
     @APIResponse(responseCode = "204", description = "Token revoked successfully")
     @APIResponse(responseCode = "400", description = "Invalid token or failed to revoke")
-    public Response revokeToken(
+    public Uni<Response> revokeToken(
             @RequestBody(description = "Refresh token to revoke", required = true,
                     content = @Content(schema = @Schema(implementation = TokenDTO.class)))
             @Valid TokenDTO revokeRequest) {
 
         if (revokeRequest.getRefreshToken() == null || revokeRequest.getRefreshToken().isBlank()) {
-            throw new BadRequestException("Refresh token is required");
+            return Uni.createFrom().failure(new BadRequestException("Refresh token is required"));
         }
 
-        keycloakAdminClient.revokeToken(revokeRequest.getRefreshToken());
-        return Response.noContent().build();
+        return Uni.createFrom().item(() -> {
+            keycloakAdminClient.revokeToken(revokeRequest.getRefreshToken());
+            return Response.noContent().build();
+        });
     }
 
     // ==================== User Info Operations ====================
@@ -99,44 +106,50 @@ public class AuthResource {
     @GET
     @Path("/userinfo")
     @Operation(summary = "Get current user info", description = "Returns information about the currently authenticated user")
-    public Response getUserInfo() {
-        if (identity.isAnonymous()) {
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity(ApiResponse.error(Response.Status.UNAUTHORIZED.getStatusCode(), "Not authenticated"))
-                    .build();
-        }
+    public Uni<Response> getUserInfo() {
+        return Uni.createFrom().item(() -> {
+            if (identity.isAnonymous()) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity(ApiResponse.error(Response.Status.UNAUTHORIZED.getStatusCode(), "Not authenticated"))
+                        .build();
+            }
 
-        String username = identity.getPrincipal().getName();
-        List<String> roles = identity.getRoles().stream().toList();
+            String username = identity.getPrincipal().getName();
+            List<String> roles = identity.getRoles().stream().toList();
 
-        Map<String, Object> userInfo = new HashMap<>();
-        userInfo.put("username", username);
-        userInfo.put("roles", roles);
-        userInfo.put("authenticated", true);
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("username", username);
+            userInfo.put("roles", roles);
+            userInfo.put("authenticated", true);
 
-        return Response.ok(ApiResponse.ok(userInfo)).build();
+            return Response.ok(ApiResponse.ok(userInfo)).build();
+        });
     }
 
     @GET
     @Path("/roles")
     @Operation(summary = "Get current user roles", description = "Returns roles assigned to the currently authenticated user")
-    public Response getUserRoles() {
-        if (identity.isAnonymous()) {
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity(ApiResponse.error(Response.Status.UNAUTHORIZED.getStatusCode(), "Not authenticated"))
-                    .build();
-        }
+    public Uni<Response> getUserRoles() {
+        return Uni.createFrom().item(() -> {
+            if (identity.isAnonymous()) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity(ApiResponse.error(Response.Status.UNAUTHORIZED.getStatusCode(), "Not authenticated"))
+                        .build();
+            }
 
-        List<String> roles = identity.getRoles().stream().toList();
-        return Response.ok(ApiResponse.ok(Map.of("roles", roles))).build();
+            List<String> roles = identity.getRoles().stream().toList();
+            return Response.ok(ApiResponse.ok(Map.of("roles", roles))).build();
+        });
     }
 
     @GET
     @Path("/check")
     @Operation(summary = "Check authentication", description = "Returns whether the user is authenticated")
-    public Response checkAuth() {
-        boolean authenticated = !identity.isAnonymous();
-        return Response.ok(ApiResponse.ok(Map.of("authenticated", authenticated))).build();
+    public Uni<Response> checkAuth() {
+        return Uni.createFrom().item(() -> {
+            boolean authenticated = !identity.isAnonymous();
+            return Response.ok(ApiResponse.ok(Map.of("authenticated", authenticated))).build();
+        });
     }
 
     private TokenDTO buildTokenDTO(Map<String, String> tokenResponse) {

@@ -5,6 +5,7 @@ import com.sales.service.ProductService;
 import com.sales.util.SecurityContextHelper;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -39,8 +40,9 @@ public class ProductResource {
     @GET
     @Operation(summary = "Get all products", description = "Retrieve a list of all products")
     @APIResponse(responseCode = "200", description = "List of products retrieved successfully")
-    public Response findAll() {
-        return Response.ok(productService.findAll()).build();
+    public Uni<Response> findAll() {
+        return productService.findAll()
+                .map(products -> Response.ok(products).build());
     }
 
     @GET
@@ -48,22 +50,23 @@ public class ProductResource {
     @Operation(summary = "Get product by ID", description = "Retrieve a product by its UUID")
     @APIResponse(responseCode = "200", description = "Product found")
     @APIResponse(responseCode = "404", description = "Product not found")
-    public Response findById(
+    public Uni<Response> findById(
             @Parameter(description = "Product UUID", example = "019d54c8-1ad8-70c8-8000-0686e5e2d186")
             @PathParam("id") UUID id) {
-        return Response.ok(productService.findById(id)).build();
+        return productService.findById(id)
+                .map(product -> Response.ok(product).build());
     }
 
     @POST
     @Operation(summary = "Create product", description = "Create a new product")
     @APIResponse(responseCode = "201", description = "Product created successfully")
-    public Response create(
+    public Uni<Response> create(
             @RequestBody(description = "Product data", required = true,
                     content = @Content(schema = @Schema(implementation = ProductDTO.class)))
             @Valid ProductDTO productDTO) {
         UUID userId = securityContextHelper.extractUserId(securityIdentity);
-        ProductDTO created = productService.create(productDTO, userId);
-        return Response.status(Response.Status.CREATED).entity(created).build();
+        return productService.create(productDTO, userId)
+                .map(created -> Response.status(Response.Status.CREATED).entity(created).build());
     }
 
     @PUT
@@ -71,11 +74,12 @@ public class ProductResource {
     @Operation(summary = "Update product", description = "Update an existing product")
     @APIResponse(responseCode = "200", description = "Product updated successfully")
     @APIResponse(responseCode = "404", description = "Product not found")
-    public Response update(
+    public Uni<Response> update(
             @Parameter(description = "Product UUID") @PathParam("id") UUID id,
             @Valid ProductDTO productDTO) {
         UUID userId = securityContextHelper.extractUserId(securityIdentity);
-        return Response.ok(productService.update(id, productDTO, userId)).build();
+        return productService.update(id, productDTO, userId)
+                .map(updated -> Response.ok(updated).build());
     }
 
     @DELETE
@@ -83,9 +87,9 @@ public class ProductResource {
     @Operation(summary = "Delete product", description = "Delete a product by UUID")
     @APIResponse(responseCode = "204", description = "Product deleted successfully")
     @APIResponse(responseCode = "404", description = "Product not found")
-    public Response delete(
+    public Uni<Response> delete(
             @Parameter(description = "Product UUID") @PathParam("id") UUID id) {
-        productService.delete(id);
-        return Response.noContent().build();
+        return productService.delete(id)
+                .map(v -> Response.noContent().build());
     }
 }

@@ -2,6 +2,7 @@ package com.sales.service;
 
 import com.sales.dto.UserDTO;
 import com.sales.exception.ConflictException;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -26,34 +27,41 @@ public class UserSyncService {
     String targetRealm;
 
     @Transactional
-    public UserDTO syncUserFromKeycloak(Map<String, Object> keycloakUser) {
-        String keycloakId = (String) keycloakUser.get("id");
-        String username = (String) keycloakUser.get("username");
-        String email = (String) keycloakUser.get("email");
+    public Uni<UserDTO> syncUserFromKeycloak(Map<String, Object> keycloakUser) {
+        return Uni.createFrom().item(() -> {
+            String keycloakId = (String) keycloakUser.get("id");
+            String username = (String) keycloakUser.get("username");
+            String email = (String) keycloakUser.get("email");
 
-        if (keycloakId == null || username == null) {
-            throw new IllegalArgumentException("Keycloak user must have id and username");
-        }
+            if (keycloakId == null || username == null) {
+                throw new IllegalArgumentException("Keycloak user must have id and username");
+            }
 
-        LOG.infof("Syncing Keycloak user %s (ID: %s) to local database", username, keycloakId);
+            LOG.infof("Syncing Keycloak user %s (ID: %s) to local database", username, keycloakId);
 
-        String role = extractRoleFromKeycloak(keycloakId);
+            String role = extractRoleFromKeycloak(keycloakId);
 
-        UserDTO syncedUser = userService.createOrUpdateFromKeycloak(keycloakId, username, role);
+            // Note: userService.createOrUpdateFromKeycloak now returns Uni, but we handle it synchronously here
+            UserDTO syncedUser = userService.createOrUpdateFromKeycloak(keycloakId, username, role).await().indefinitely();
 
-        LOG.infof("Successfully synced user %s (Local ID: %s)", username, syncedUser.getId());
+            LOG.infof("Successfully synced user %s (Local ID: %s)", username, syncedUser.getId());
 
-        return syncedUser;
+            return syncedUser;
+        });
     }
 
     @Transactional
-    public void deleteUserByKeycloakId(String keycloakId) {
-        UserDTO user = userService.findByKeycloakId(keycloakId);
-        if (user != null) {
-            LOG.infof("Deleting local user record for Keycloak ID: %s (Local ID: %s)",
-                    keycloakId, user.getId());
-            userService.delete(user.getId());
-        }
+    public Uni<Void> deleteUserByKeycloakId(String keycloakId) {
+        return Uni.createFrom().item(() -> {
+                    UserDTO user = userService.findByKeycloakId(keycloakId).await().indefinitely();
+                    if (user != null) {
+                        LOG.infof("Deleting local user record for Keycloak ID: %s (Local ID: %s)",
+                                keycloakId, user.getId());
+                        userService.delete(user.getId()).await().indefinitely();
+                    }
+                    return null;
+                })
+                .replaceWithVoid();
     }
 
     private String extractRoleFromKeycloak(String keycloakId) {

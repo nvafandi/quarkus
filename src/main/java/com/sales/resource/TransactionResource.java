@@ -5,6 +5,7 @@ import com.sales.service.TransactionService;
 import com.sales.util.SecurityContextHelper;
 import io.quarkus.security.Authenticated;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -39,8 +40,9 @@ public class TransactionResource {
     @GET
     @Operation(summary = "Get all transactions", description = "Retrieve a list of all transactions")
     @APIResponse(responseCode = "200", description = "List of transactions retrieved successfully")
-    public Response findAll() {
-        return Response.ok(transactionService.findAll()).build();
+    public Uni<Response> findAll() {
+        return transactionService.findAll()
+                .map(transactions -> Response.ok(transactions).build());
     }
 
     @GET
@@ -48,19 +50,21 @@ public class TransactionResource {
     @Operation(summary = "Get transaction by ID", description = "Retrieve a transaction by its UUID")
     @APIResponse(responseCode = "200", description = "Transaction found")
     @APIResponse(responseCode = "404", description = "Transaction not found")
-    public Response findById(
+    public Uni<Response> findById(
             @Parameter(description = "Transaction UUID", example = "019d54c9-84c0-77ae-8000-069c7822b826")
             @PathParam("id") UUID id) {
-        return Response.ok(transactionService.findById(id)).build();
+        return transactionService.findById(id)
+                .map(transaction -> Response.ok(transaction).build());
     }
 
     @GET
     @Path("/user/{userId}")
     @Operation(summary = "Get transactions by user", description = "Retrieve all transactions for a specific user")
     @APIResponse(responseCode = "200", description = "List of user transactions")
-    public Response findByUserId(
+    public Uni<Response> findByUserId(
             @Parameter(description = "User UUID") @PathParam("userId") UUID userId) {
-        return Response.ok(transactionService.findByUserId(userId)).build();
+        return transactionService.findByUserId(userId)
+                .map(transactions -> Response.ok(transactions).build());
     }
 
     @POST
@@ -68,13 +72,13 @@ public class TransactionResource {
     @APIResponse(responseCode = "201", description = "Transaction created successfully")
     @APIResponse(responseCode = "400", description = "Insufficient stock or invalid data")
     @APIResponse(responseCode = "404", description = "User or product not found")
-    public Response create(
+    public Uni<Response> create(
             @RequestBody(description = "Transaction data with items", required = true,
                     content = @Content(schema = @Schema(implementation = TransactionDTO.class)))
             @Valid TransactionDTO transactionDTO) {
         UUID userId = securityContextHelper.extractUserId(securityIdentity);
-        TransactionDTO created = transactionService.create(transactionDTO, userId);
-        return Response.status(Response.Status.CREATED).entity(created).build();
+        return transactionService.create(transactionDTO, userId)
+                .map(created -> Response.status(Response.Status.CREATED).entity(created).build());
     }
 
     @DELETE
@@ -82,9 +86,9 @@ public class TransactionResource {
     @Operation(summary = "Delete transaction", description = "Delete a transaction by UUID")
     @APIResponse(responseCode = "204", description = "Transaction deleted successfully")
     @APIResponse(responseCode = "404", description = "Transaction not found")
-    public Response delete(
+    public Uni<Response> delete(
             @Parameter(description = "Transaction UUID") @PathParam("id") UUID id) {
-        transactionService.delete(id);
-        return Response.noContent().build();
+        return transactionService.delete(id)
+                .map(v -> Response.noContent().build());
     }
 }
